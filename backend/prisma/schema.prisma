@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Song {
+  id          String   @id @default(cuid())
+  title       String
+  artist      String?
+  key         String?
+  tempo       Int?
+  duration    Int?     // duration in seconds
+  lyrics      String?
+  chords      String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  worshipSets WorshipSetSong[]
+
+  @@map("songs")
+}
+
+model WorshipSet {
+  id          String   @id @default(cuid())
+  name        String
+  date        DateTime
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  songs WorshipSetSong[]
+
+  @@map("worship_sets")
+}
+
+model WorshipSetSong {
+  id          String @id @default(cuid())
+  worshipSetId String
+  songId      String
+  order       Int
+
+  // Relations
+  worshipSet  WorshipSet @relation(fields: [worshipSetId], references: [id], onDelete: Cascade)
+  song        Song       @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([worshipSetId, songId])
+  @@map("worship_set_songs")
+}
