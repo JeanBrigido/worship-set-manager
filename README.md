@@ -56,13 +56,15 @@ cp frontend/.env.example frontend/.env
 # Edit the .env files with your actual values
 ```
 
-4. Set up the database:
+4. Set up the database (optional for initial testing):
 
 ```bash
 cd backend
 npm run db:generate
 npm run db:push
 ```
+
+**Note**: The backend will run with mock data if no database is connected, so you can test the application immediately without setting up PostgreSQL.
 
 ### Running the Application
 
