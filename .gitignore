@@ -11,12 +11,26 @@ build/
 .next/
 out/
 
-# Environment variables
+# Environment variables - NEVER commit these!
 .env
 .env.local
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+*.env
+!.env.example
+
+# Secrets and credentials
+secrets/
+credentials/
+*.key
+*.pem
+*.p12
+*.pfx
+*.cert
+*.crt
 
 # IDE and editor files
 .vscode/
