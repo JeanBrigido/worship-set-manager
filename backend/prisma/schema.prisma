@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,49 +7,293 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Song {
-  id          String   @id @default(cuid())
-  title       String
-  artist      String?
-  key         String?
-  tempo       Int?
-  duration    Int?     // duration in seconds
-  lyrics      String?
-  chords      String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+/// ///////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////
+model User {
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  password           String?
+  name               String
+  phoneE164          String?
+  roles              Role[]
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  emailVerified      DateTime?
+  image              String?
+  accounts           Account[]
+  assignments        Assignment[]
+  availability       Availability[]
+  defaultAssignments DefaultAssignment[]
+  notifications      NotificationLog[]
+  servicesLed        Service[]           @relation("LeaderServices")
+  sessions           Session[]
+  suggestionSlots    SuggestionSlot[]
+  leaderRotations    LeaderRotation[]
+  worshipSetsLed     WorshipSet[]        @relation("WorshipSetLeader")
+}
 
-  // Relations
-  worshipSets WorshipSetSong[]
+/// ///////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////
+model ServiceType {
+  id                 String              @id @default(uuid())
+  name               String              @unique
+  defaultStartTime   String
+  rrule              String?
+  defaultAssignments DefaultAssignment[]
+  services           Service[]
+  leaderRotations    LeaderRotation[]
+}
 
-  @@map("songs")
+model Service {
+  id            String        @id @default(uuid())
+  serviceTypeId String
+  serviceDate   DateTime
+  leaderId      String?
+  status        ServiceStatus @default(planned)
+  leader        User?         @relation("LeaderServices", fields: [leaderId], references: [id])
+  serviceType   ServiceType   @relation(fields: [serviceTypeId], references: [id])
+  worshipSet    WorshipSet?
+
+  @@unique([serviceTypeId, serviceDate])
+  @@index([serviceDate])
 }
 
 model WorshipSet {
-  id          String   @id @default(cuid())
-  name        String
-  date        DateTime
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  songs WorshipSetSong[]
-
-  @@map("worship_sets")
+  id              String           @id @default(uuid())
+  serviceId       String           @unique
+  status          SetStatus        @default(draft)
+  suggestDueAt    DateTime?
+  notes           String?
+  leaderUserId    String?
+  assignments     Assignment[]
+  setSongs        SetSong[]
+  suggestionSlots SuggestionSlot[]
+  service         Service          @relation(fields: [serviceId], references: [id])
+  leaderUser      User?            @relation("WorshipSetLeader", fields: [leaderUserId], references: [id])
 }
 
-model WorshipSetSong {
-  id          String @id @default(cuid())
-  worshipSetId String
-  songId      String
-  order       Int
+/// ///////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////
+model Song {
+  id                String        @id @default(uuid())
+  title             String
+  artist            String?
+  ccliNumber        String?
+  defaultYoutubeUrl String?
+  tags              String[]
+  language          String?
+  familiarityScore  Int           @default(50)
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  versions          SongVersion[]
+  suggestions       Suggestion[]
 
-  // Relations
-  worshipSet  WorshipSet @relation(fields: [worshipSetId], references: [id], onDelete: Cascade)
-  song        Song       @relation(fields: [songId], references: [id], onDelete: Cascade)
+  @@index([title])
+}
 
-  @@unique([worshipSetId, songId])
-  @@map("worship_set_songs")
+model SongVersion {
+  id         String    @id @default(uuid())
+  songId     String
+  name       String
+  youtubeUrl String?
+  defaultKey String?
+  bpm        Int?
+  notes      String?
+  setSongs   SetSong[]
+  song       Song      @relation(fields: [songId], references: [id])
+}
+
+model SetSong {
+  id                 String      @id @default(uuid())
+  setId              String
+  songVersionId      String
+  position           Int
+  keyOverride        String?
+  youtubeUrlOverride String?
+  isNew              Boolean     @default(false)
+  notes              String?
+  worshipSet         WorshipSet  @relation(fields: [setId], references: [id])
+  songVersion        SongVersion @relation(fields: [songVersionId], references: [id])
+
+  @@unique([setId, position])
+}
+
+/// ///////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////
+model SuggestionSlot {
+  id             String       @id @default(uuid())
+  setId          String
+  assignedUserId String
+  minSongs       Int
+  maxSongs       Int
+  dueAt          DateTime
+  status         SlotStatus   @default(pending)
+  suggestions    Suggestion[]
+  assignedUser   User         @relation(fields: [assignedUserId], references: [id])
+  worshipSet     WorshipSet   @relation(fields: [setId], references: [id])
+}
+
+model Suggestion {
+  id                 String         @id @default(uuid())
+  slotId             String
+  songId             String
+  youtubeUrlOverride String?
+  notes              String?
+  suggestionSlot     SuggestionSlot @relation(fields: [slotId], references: [id])
+  song               Song           @relation(fields: [songId], references: [id])
+}
+
+/// ///////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////
+model Instrument {
+  id                 String              @id @default(uuid())
+  code               String              @unique
+  displayName        String
+  maxPerSet          Int
+  assignments        Assignment[]
+  defaultAssignments DefaultAssignment[]
+}
+
+model DefaultAssignment {
+  id            String      @id @default(uuid())
+  serviceTypeId String
+  instrumentId  String
+  userId        String
+  instrument    Instrument  @relation(fields: [instrumentId], references: [id])
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+
+  @@unique([serviceTypeId, instrumentId])
+}
+
+model Assignment {
+  id           String           @id @default(uuid())
+  setId        String
+  instrumentId String
+  userId       String
+  status       AssignmentStatus @default(invited)
+  invitedAt    DateTime?
+  respondedAt  DateTime?
+  instrument   Instrument       @relation(fields: [instrumentId], references: [id])
+  worshipSet   WorshipSet       @relation(fields: [setId], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
+
+  @@unique([setId, instrumentId, userId])
+}
+
+/// ///////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////
+model Availability {
+  id     String   @id @default(uuid())
+  userId String
+  start  DateTime
+  end    DateTime
+  notes  String?
+  user   User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, start, end])
+}
+
+model LeaderRotation {
+  id            String      @id @default(uuid())
+  userId        String
+  serviceTypeId String
+  rotationOrder Int
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  user          User        @relation(fields: [userId], references: [id])
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  @@unique([serviceTypeId, rotationOrder])
+  @@index([serviceTypeId, isActive])
+}
+
+model NotificationLog {
+  id          String   @id @default(uuid())
+  userId      String
+  channel     Channel
+  templateKey String
+  payloadJson Json
+  sentAt      DateTime
+  status      String
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+/// ///////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+/// ///////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////
+enum Role {
+  admin
+  leader
+  musician
+}
+
+enum ServiceStatus {
+  planned
+  published
+  cancelled
+}
+
+enum SetStatus {
+  draft
+  collecting
+  selecting
+  published
+  locked
+}
+
+enum SlotStatus {
+  pending
+  submitted
+  missed
+}
+
+enum AssignmentStatus {
+  invited
+  accepted
+  declined
+  withdrawn
+}
+
+enum Channel {
+  email
+  sms
 }

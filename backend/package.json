@@ -12,24 +12,47 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "prisma": "prisma",
+    "db:pull": "prisma db pull",
+    "migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "@prisma/client": "^6.16.3",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "@prisma/client": "^5.5.0"
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.17",
-    "@types/cors": "^2.8.14",
-    "@types/node": "^20.8.0",
+    "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.19.17",
+    "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^6.7.0",
     "@typescript-eslint/parser": "^6.7.0",
     "eslint": "^8.50.0",
+    "jest": "^30.2.0",
+    "jest-mock-extended": "^4.0.0",
     "nodemon": "^3.0.1",
-    "prisma": "^5.5.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.2.0"
+    "prisma": "^5.22.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }

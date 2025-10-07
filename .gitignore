@@ -61,7 +61,7 @@ jspm_packages/
 .eslintcache
 
 # Prisma
-prisma/migrations/
+# prisma/migrations/ - DISABLED: Migrations must be tracked in version control for production
 
 # Temporary folders
 tmp/

@@ -1,67 +1,127 @@
-export default function Home() {
+import { PageHeader } from '@/components/layout/page-header';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Music, Calendar, Users, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+
+export default async function Home() {
+  const session = await getServerSession(authOptions);
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Church Worship Set Manager
-        </p>
+    <div className="space-y-6">
+      <PageHeader
+        title="Welcome to Worship Set Manager"
+        description="Streamline your church&apos;s worship experience with modern tools for song management, set planning, and team coordination."
+      />
+
+      {/* Feature Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+              <Music className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-lg">Song Management</CardTitle>
+            <CardDescription>
+              Organize and manage your church&apos;s worship songs and hymns with ease.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/songs">Browse Songs</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+              <Calendar className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-lg">Set Planning</CardTitle>
+            <CardDescription>
+              Create and schedule worship sets for services and special events.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/services">View Services</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+              <Users className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-lg">Team Coordination</CardTitle>
+            <CardDescription>
+              Coordinate with musicians and worship team members seamlessly.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/assignments">View Assignments</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+              <BarChart3 className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-lg">Analytics</CardTitle>
+            <CardDescription>
+              Track song usage and worship metrics to enhance your ministry.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" size="sm" disabled>
+              Coming Soon
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <h1 className="text-4xl font-bold text-center">
-          Welcome to Worship Set Manager
-        </h1>
-      </div>
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>
+            Get started with common tasks
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          {/* Role-based quick actions */}
+          {((session?.user as any)?.roles?.includes('admin') || (session?.user as any)?.roles?.includes('leader')) && (
+            <>
+              <Button asChild>
+                <Link href="/services/new">Create New Service</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/songs/new">Add New Song</Link>
+              </Button>
+            </>
+          )}
+          <Button variant="outline" asChild>
+            <Link href="/assignments">View Assignments</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
-          <h2 className="mb-3 text-2xl font-semibold">
-            Song Management{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Organize and manage your church&apos;s worship songs and hymns.
-          </p>
+      {/* Development-only debug tools */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="space-y-6 border-t pt-6 mt-12">
+          <div className="text-sm text-muted-foreground">Development Tools (hidden in production)</div>
+          {/* Uncomment below to show debug components in development */}
+          {/* <ReactQueryTest /> */}
+          {/* <ApiTest /> */}
+          {/* {(session?.user as any)?.roles?.includes('admin') && <UsersList />} */}
         </div>
-
-        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
-          <h2 className="mb-3 text-2xl font-semibold">
-            Set Planning{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Create and schedule worship sets for services and events.
-          </p>
-        </div>
-
-        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
-          <h2 className="mb-3 text-2xl font-semibold">
-            Team Coordination{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Coordinate with musicians and worship team members.
-          </p>
-        </div>
-
-        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
-          <h2 className="mb-3 text-2xl font-semibold">
-            Analytics{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Track song usage and worship metrics.
-          </p>
-        </div>
-      </div>
-    </main>
+      )}
+    </div>
   );
 }
