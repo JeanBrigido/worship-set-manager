@@ -58,27 +58,29 @@ async function main() {
 
   console.log("✅ Seeded instruments:", instruments.map(i => i.code));
 
-  // --- Test Users ---
+  // --- Test Users (DEVELOPMENT ONLY - DO NOT USE IN PRODUCTION!) ---
+  // WARNING: These test users should ONLY be created in local development
+  // For production, create real users through the application
   const hashedPassword = await bcrypt.hash("password123", 12);
 
   const testUsers = [
     {
       email: "admin@test.com",
-      name: "Admin User",
+      name: "Admin User (DEV ONLY)",
       password: hashedPassword,
       roles: [Role.admin],
       isActive: true,
     },
     {
       email: "leader@test.com",
-      name: "Leader User",
+      name: "Leader User (DEV ONLY)",
       password: hashedPassword,
       roles: [Role.leader],
       isActive: true,
     },
     {
       email: "musician@test.com",
-      name: "Musician User",
+      name: "Musician User (DEV ONLY)",
       password: hashedPassword,
       roles: [Role.musician],
       isActive: true,

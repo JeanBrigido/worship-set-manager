@@ -59,16 +59,6 @@ export default function SignIn() {
             </p>
           </div>
 
-          {/* Demo Credentials */}
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm font-medium text-blue-900 mb-2">Demo Accounts:</p>
-            <div className="text-xs text-blue-800 space-y-1">
-              <div>Admin: admin@test.com / password123</div>
-              <div>Leader: leader@test.com / password123</div>
-              <div>Musician: musician@test.com / password123</div>
-            </div>
-          </div>
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
