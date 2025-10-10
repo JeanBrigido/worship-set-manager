@@ -7,7 +7,7 @@ export const createServiceSchema = z.object({
   service_type_id: z.string().uuid("Must be a valid UUID").optional(),
   notes: z.string().max(500).optional(),
 }).refine(
-  (data) => data.serviceTypeId || data.service_type_id,
+  (data: { serviceTypeId?: string; service_type_id?: string }) => data.serviceTypeId || data.service_type_id,
   { message: "Either serviceTypeId or service_type_id is required" }
 );
 

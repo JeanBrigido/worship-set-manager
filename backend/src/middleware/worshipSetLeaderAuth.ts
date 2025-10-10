@@ -35,7 +35,7 @@ export const requireWorshipSetLeader = async (
     }
 
     // Check if user is admin (admins can manage any worship set)
-    if (req.user.roles?.includes('Admin')) {
+    if (req.user.roles?.includes(Role.admin)) {
       return next();
     }
 
@@ -103,7 +103,7 @@ export const requireAssignmentWorshipSetLeader = async (
     }
 
     // Check if user is admin
-    if (req.user.roles?.includes('Admin')) {
+    if (req.user.roles?.includes(Role.admin)) {
       return next();
     }
 
