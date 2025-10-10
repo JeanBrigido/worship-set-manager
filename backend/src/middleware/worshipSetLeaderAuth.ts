@@ -165,10 +165,10 @@ export const isWorshipSetLeader = async (
  */
 export const canManageWorshipSet = async (
   userId: string,
-  roles: string[],
+  roles: Role[],
   worshipSetId: string
 ): Promise<boolean> => {
-  if (roles.includes('Admin')) {
+  if (roles.includes(Role.admin)) {
     return true;
   }
 
