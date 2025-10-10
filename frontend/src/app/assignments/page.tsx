@@ -43,7 +43,7 @@ export default function AssignmentsPage() {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
-  const isAdmin = session?.user?.roles?.includes('Admin')
+  const isAdmin = session?.user?.roles?.includes('admin')
   // Note: We don't check for permanent Leader role here anymore
   // Leaders are assigned per worship set via worshipSet.leaderUserId
 
@@ -54,7 +54,7 @@ export default function AssignmentsPage() {
   const fetchAssignments = async () => {
     try {
       setLoading(true)
-      const { data, error } = await apiClient.get('/assignments')
+      const { data, error } = await apiClient.get<Assignment[]>('/assignments')
       if (error) {
         throw new Error(error.message)
       }

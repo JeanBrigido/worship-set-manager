@@ -110,7 +110,7 @@ export default function ServiceDetailPage() {
   const rejectSuggestion = useRejectSuggestion()
 
   // Check if current user is the worship set leader or admin
-  const isAdmin = session?.user?.roles?.includes('Admin')
+  const isAdmin = session?.user?.roles?.includes('admin')
   const isWorshipSetLeader = service?.worshipSet?.leaderUserId === session?.user?.id
   const canManageWorshipSet = isAdmin || isWorshipSetLeader
 

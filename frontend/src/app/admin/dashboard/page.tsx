@@ -93,17 +93,18 @@ export default function AdminDashboard() {
       return response.data || []
     },
   })
-  const { data: upcomingServices = [] } = useQuery({
+  const { data: upcomingServices = [] } = useQuery<Service[]>({
     queryKey: ['services', 'upcoming'],
     queryFn: async () => {
       const response = await apiClient.get<{ data: Service[] }>('/services?limit=10&upcoming=true')
       // Handle both wrapped and unwrapped response formats
-      return response.data?.data || response.data || []
+      const services = response.data?.data || response.data || []
+      return Array.isArray(services) ? services : []
     },
   })
 
   // Fetch all suggestion slots for upcoming services
-  const worshipSetIds = upcomingServices
+  const worshipSetIds = (upcomingServices || [])
     .filter(s => s.worshipSet?.id)
     .map(s => s.worshipSet!.id)
 
