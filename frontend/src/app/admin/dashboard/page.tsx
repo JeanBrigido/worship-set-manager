@@ -20,7 +20,7 @@ import { useSuggestionSlotsByWorshipSet } from '@/hooks/use-suggestions'
 import { AssignSuggesterModal } from '@/components/worship-set/assign-suggester-modal'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import { ArrowLeft, Plus, Trash2, UserCheck, Calendar, Users, Settings, ListChecks } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, UserCheck, Calendar, Users, Settings, ListChecks, Guitar } from 'lucide-react'
 import Link from 'next/link'
 
 interface ServiceType {
@@ -252,6 +252,12 @@ export default function AdminDashboard() {
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
+          </Button>
+        </Link>
+        <Link href="/admin/instruments">
+          <Button variant="outline" size="sm">
+            <Guitar className="mr-2 h-4 w-4" />
+            Manage Instruments
           </Button>
         </Link>
       </div>
