@@ -11,15 +11,25 @@ import { Badge } from '@/components/ui/badge'
 import { Edit, Trash2, ArrowLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
+interface SongVersion {
+  id: string
+  name: string
+  defaultKey?: string
+  bpm?: number
+  youtubeUrl?: string
+}
+
 interface Song {
   id: string
   title: string
-  artist: string
-  key?: string
-  tempo?: number
-  ccli?: string
+  artist?: string
+  language?: string
+  ccliNumber?: string
+  defaultYoutubeUrl?: string
+  tags: string[]
   familiarityScore: number
   isActive: boolean
+  versions: SongVersion[]
   createdAt: string
   updatedAt: string
 }
@@ -29,7 +39,8 @@ async function fetchSong(id: string): Promise<Song> {
   if (!response.ok) {
     throw new Error('Failed to fetch song')
   }
-  return response.json()
+  const result = await response.json()
+  return result.data || result
 }
 
 export default function SongDetailPage({ params }: { params: { id: string } }) {
@@ -108,7 +119,7 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
     <div className="space-y-8">
       <PageHeader
         title={song.title}
-        description={`by ${song.artist}`}
+        description={song.artist ? `by ${song.artist}` : undefined}
       />
 
       <div className="flex gap-4">
@@ -143,34 +154,29 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
                 <p className="text-lg font-medium">{song.title}</p>
               </div>
 
-              <div>
-                <h3 className="font-semibold text-sm text-muted-foreground mb-1">Artist</h3>
-                <p>{song.artist}</p>
-              </div>
-
-              {song.key && (
+              {song.artist && (
                 <div>
-                  <h3 className="font-semibold text-sm text-muted-foreground mb-1">Key</h3>
-                  <Badge variant="secondary">{song.key}</Badge>
+                  <h3 className="font-semibold text-sm text-muted-foreground mb-1">Artist</h3>
+                  <p>{song.artist}</p>
+                </div>
+              )}
+
+              {song.language && (
+                <div>
+                  <h3 className="font-semibold text-sm text-muted-foreground mb-1">Language</h3>
+                  <p>{song.language}</p>
+                </div>
+              )}
+
+              {song.ccliNumber && (
+                <div>
+                  <h3 className="font-semibold text-sm text-muted-foreground mb-1">CCLI Number</h3>
+                  <p>{song.ccliNumber}</p>
                 </div>
               )}
             </div>
 
             <div className="space-y-4">
-              {song.tempo && (
-                <div>
-                  <h3 className="font-semibold text-sm text-muted-foreground mb-1">Tempo</h3>
-                  <p>{song.tempo} BPM</p>
-                </div>
-              )}
-
-              {song.ccli && (
-                <div>
-                  <h3 className="font-semibold text-sm text-muted-foreground mb-1">CCLI</h3>
-                  <p>{song.ccli}</p>
-                </div>
-              )}
-
               <div>
                 <h3 className="font-semibold text-sm text-muted-foreground mb-1">Familiarity Score</h3>
                 <div className="flex items-center gap-2">
@@ -184,6 +190,21 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
                   )}
                 </div>
               </div>
+
+              {song.versions.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-sm text-muted-foreground mb-1">Versions</h3>
+                  <div className="space-y-2">
+                    {song.versions.map((version) => (
+                      <div key={version.id} className="flex items-center gap-2">
+                        <Badge variant="outline">{version.name}</Badge>
+                        {version.defaultKey && <span className="text-sm">Key: {version.defaultKey}</span>}
+                        {version.bpm && <span className="text-sm">{version.bpm} BPM</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

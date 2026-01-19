@@ -9,15 +9,24 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 
+interface SongVersion {
+  id: string
+  name: string
+  defaultKey?: string
+  bpm?: number
+}
+
 interface Song {
   id: string
   title: string
-  artist: string
-  key?: string
-  tempo?: number
-  ccli?: string
+  artist?: string
+  language?: string
+  ccliNumber?: string
+  defaultYoutubeUrl?: string
+  tags: string[]
   familiarityScore: number
   isActive: boolean
+  versions: SongVersion[]
   createdAt: string
   updatedAt: string
 }
@@ -27,7 +36,8 @@ async function fetchSong(id: string): Promise<Song> {
   if (!response.ok) {
     throw new Error('Failed to fetch song')
   }
-  return response.json()
+  const result = await response.json()
+  return result.data || result
 }
 
 export default function EditSongPage({ params }: { params: { id: string } }) {
@@ -73,17 +83,17 @@ export default function EditSongPage({ params }: { params: { id: string } }) {
     <div className="space-y-8">
       <PageHeader
         title="Edit Song"
-        description={`Editing "${song.title}" by ${song.artist}`}
+        description={song.artist ? `Editing "${song.title}" by ${song.artist}` : `Editing "${song.title}"`}
       />
 
       <SongForm
         songId={params.id}
         initialData={{
           title: song.title,
-          artist: song.artist,
-          key: song.key,
-          tempo: song.tempo,
-          ccliNumber: song.ccli,
+          artist: song.artist || '',
+          key: song.versions[0]?.defaultKey,
+          tempo: song.versions[0]?.bpm,
+          ccliNumber: song.ccliNumber,
           familiarityScore: song.familiarityScore,
         }}
         onSuccess={() => {

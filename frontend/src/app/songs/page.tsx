@@ -25,15 +25,25 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { apiClient } from '@/lib/api-client'
 
+interface SongVersion {
+  id: string
+  name: string
+  defaultKey?: string
+  bpm?: number
+  youtubeUrl?: string
+}
+
 interface Song {
   id: string
   title: string
-  artist: string
-  key?: string
-  tempo?: number
-  language: string
+  artist?: string
+  language?: string
   ccliNumber?: string
+  defaultYoutubeUrl?: string
+  tags: string[]
   familiarityScore: number
+  isActive: boolean
+  versions: SongVersion[]
   createdAt: string
   updatedAt: string
 }
@@ -145,22 +155,27 @@ export default function SongsPage() {
       },
     },
     {
-      accessorKey: "key",
+      id: "key",
       header: "Key",
-      cell: ({ row }) => (
-        <div className="text-center">
-          {row.getValue("key") || "-"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "tempo",
-      header: "Tempo",
       cell: ({ row }) => {
-        const tempo = row.getValue("tempo") as number
+        const song = row.original
+        const defaultKey = song.versions[0]?.defaultKey
         return (
           <div className="text-center">
-            {tempo ? `${tempo} BPM` : "-"}
+            {defaultKey || "-"}
+          </div>
+        )
+      },
+    },
+    {
+      id: "tempo",
+      header: "Tempo",
+      cell: ({ row }) => {
+        const song = row.original
+        const bpm = song.versions[0]?.bpm
+        return (
+          <div className="text-center">
+            {bpm ? `${bpm} BPM` : "-"}
           </div>
         )
       },
