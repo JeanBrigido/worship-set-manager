@@ -15,7 +15,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { useToast } from '@/hooks/use-toast'
 import { SuggestedSongs } from '@/components/worship-set/suggested-songs'
 import { useApproveSuggestion, useRejectSuggestion } from '@/hooks/use-suggestions'
-import { Calendar, Edit, Users, Music, Settings, ArrowLeft, Trash2, Plus, Search, Crown } from 'lucide-react'
+import { Calendar, Edit, Users, Music, Settings, ArrowLeft, Trash2, Plus, Search, Crown, ChevronUp, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { apiClient } from '@/lib/api-client'
 
@@ -345,6 +345,74 @@ export default function ServiceDetailPage() {
     }
   }
 
+  const handleMoveSong = async (direction: 'up' | 'down') => {
+    if (!service?.worshipSet?.setSongs) return
+
+    const songs = [...service.worshipSet.setSongs].sort((a, b) => a.position - b.position)
+    const currentIndex = songs.findIndex(s => s.id === songToRemove?.id)
+
+    // Find the song that will be moved and calculate new position
+    // This is handled by getting song IDs in new order
+
+    // Create a simple swap instead
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    if (targetIndex < 0 || targetIndex >= songs.length) return
+
+    // Swap the positions
+    const newOrder = songs.map(s => s.id)
+    ;[newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]]
+
+    try {
+      const { error } = await apiClient.put(`/set-songs/set/${service.worshipSet.id}/reorder`, {
+        songIds: newOrder
+      })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      fetchService()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to reorder songs',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleReorderSong = async (songId: string, direction: 'up' | 'down') => {
+    if (!service?.worshipSet?.setSongs) return
+
+    const songs = [...service.worshipSet.setSongs].sort((a, b) => a.position - b.position)
+    const currentIndex = songs.findIndex(s => s.id === songId)
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+
+    if (targetIndex < 0 || targetIndex >= songs.length) return
+
+    // Create new order by swapping
+    const newOrder = songs.map(s => s.id)
+    ;[newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]]
+
+    try {
+      const { error } = await apiClient.put(`/set-songs/set/${service.worshipSet.id}/reorder`, {
+        songIds: newOrder
+      })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      fetchService()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to reorder songs',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const getStatusVariant = (status: Service['status']) => {
     switch (status) {
       case 'published':
@@ -553,7 +621,7 @@ export default function ServiceDetailPage() {
               <div className="space-y-3">
                 {service.worshipSet.setSongs
                   .sort((a, b) => a.position - b.position)
-                  .map((setSong, index) => (
+                  .map((setSong, index, sortedSongs) => (
                     <div key={setSong.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                       <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
                         {index + 1}
@@ -566,14 +634,34 @@ export default function ServiceDetailPage() {
                         </div>
                       </div>
                       {canManageWorshipSet && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSongToRemove({ id: setSong.id, title: setSong.songVersion.song.title })}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleReorderSong(setSong.id, 'up')}
+                            disabled={index === 0}
+                            className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleReorderSong(setSong.id, 'down')}
+                            disabled={index === sortedSongs.length - 1}
+                            className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSongToRemove({ id: setSong.id, title: setSong.songVersion.song.title })}
+                            className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   ))}

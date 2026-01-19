@@ -158,3 +158,60 @@ export const deleteSetSong = async (req: Request & { user?: JwtPayload }, res: R
     res.status(500).json({ error: "Could not delete set song" });
   }
 };
+
+/**
+ * PUT /setSongs/set/:setId/reorder
+ * Reorder songs in a worship set
+ */
+export const reorderSetSongs = async (req: Request & { user?: JwtPayload }, res: Response) => {
+  try {
+    if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const { setId } = req.params;
+    const { songIds } = req.body as { songIds: string[] };
+
+    if (!Array.isArray(songIds) || songIds.length === 0) {
+      return res.status(400).json({ error: "songIds must be a non-empty array" });
+    }
+
+    // Verify all song IDs belong to this set
+    const existingSongs = await prisma.setSong.findMany({
+      where: { setId },
+      select: { id: true }
+    });
+
+    const existingIds = new Set(existingSongs.map(s => s.id));
+    const invalidIds = songIds.filter(id => !existingIds.has(id));
+
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: "Some song IDs do not belong to this worship set",
+        invalidIds
+      });
+    }
+
+    // Update all positions in a transaction
+    await prisma.$transaction(
+      songIds.map((songId, index) =>
+        prisma.setSong.update({
+          where: { id: songId },
+          data: { position: index + 1 }
+        })
+      )
+    );
+
+    // Return the reordered songs
+    const reorderedSongs = await prisma.setSong.findMany({
+      where: { setId },
+      orderBy: { position: "asc" },
+      include: { songVersion: { include: { song: true } } }
+    });
+
+    res.json({ data: reorderedSongs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Could not reorder songs" });
+  }
+};

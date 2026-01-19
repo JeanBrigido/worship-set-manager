@@ -38,4 +38,7 @@ router.put(
 // Remove a song from a worship set (Admin/Leader only)
 router.delete("/:id", authMiddleware, requireRole([Role.admin, Role.leader]), setSongsController.deleteSetSong);
 
+// Reorder songs in a worship set (Admin/Leader only)
+router.put("/set/:setId/reorder", authMiddleware, requireRole([Role.admin, Role.leader]), setSongsController.reorderSetSongs);
+
 export default router;
