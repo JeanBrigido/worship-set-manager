@@ -44,6 +44,7 @@ const routes = [
   { path: "/api/users", file: "./routes/users", name: "Users" },
   { path: "/api/services", file: "./routes/services", name: "Services" },
   { path: "/api/songs", file: "./routes/songs", name: "Songs" },
+  { path: "/api/song-versions", file: "./routes/songVersions", name: "Song Versions" },
   { path: "/api/assignments", file: "./routes/assignments", name: "Assignments" },
   { path: "/api/service-types", file: "./routes/serviceTypes", name: "Service Types" },
   { path: "/api/worship-sets", file: "./routes/worshipSets", name: "Worship Sets" },
