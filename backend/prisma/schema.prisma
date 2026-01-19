@@ -31,6 +31,7 @@ model User {
   suggestionSlots    SuggestionSlot[]
   leaderRotations    LeaderRotation[]
   worshipSetsLed     WorshipSet[]        @relation("WorshipSetLeader")
+  passwordResetTokens PasswordResetToken[]
 }
 
 /// ///////////////////////////////////////////////////
@@ -256,6 +257,16 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// ///////////////////////////////////////////////////
