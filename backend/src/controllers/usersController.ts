@@ -327,8 +327,10 @@ export const toggleUserActive = async (req: Request & { user?: JwtPayload }, res
     const { id } = req.params;
     const { isActive } = req.body;
 
-    if (typeof isActive !== 'boolean') {
-      return res.status(400).json({ error: 'isActive must be a boolean' });
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
     // Prevent deactivating yourself

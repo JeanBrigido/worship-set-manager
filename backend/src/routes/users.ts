@@ -110,6 +110,7 @@ router.patch(
   authMiddleware,
   validateUuid('id'),
   requireRole([Role.admin]),
+  validateRequest("toggleUserActiveSchema"),
   usersController.toggleUserActive
 );
 

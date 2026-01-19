@@ -28,3 +28,7 @@ export const updateUserSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters").optional(),
   roles: z.array(z.nativeEnum(Role)).optional(),
 });
+
+export const toggleUserActiveSchema = z.object({
+  isActive: z.boolean(),
+});
