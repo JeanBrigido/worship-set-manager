@@ -49,20 +49,15 @@ export const createSuggestion = async (req: Request & { user?: JwtPayload }, res
   try {
     const { slotId, songId, youtubeUrlOverride, notes } = req.body;
 
-    // Get slot with worship set to check due date
+    // Get slot to check due date
     const slot = await prisma.suggestionSlot.findUnique({
       where: { id: slotId },
-      include: {
-        worshipSet: {
-          select: { suggestDueAt: true }
-        }
-      }
     });
 
     if (!slot) return res.status(404).json({ error: "Slot not found" });
 
-    // Check if suggestions are still allowed (before due date)
-    if (slot.worshipSet.suggestDueAt && new Date() > slot.worshipSet.suggestDueAt) {
+    // Check if suggestions are still allowed (before slot due date)
+    if (slot.dueAt && new Date() > slot.dueAt) {
       return res.status(400).json({
         error: "Suggestion deadline has passed"
       });
