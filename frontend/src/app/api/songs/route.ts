@@ -15,7 +15,12 @@ export async function GET(request: NextRequest) {
 
     const token = await generateJwtToken()
 
-    const response = await fetch(`${API_BASE}/songs`, {
+    // Forward query parameters to backend
+    const { searchParams } = new URL(request.url)
+    const queryString = searchParams.toString()
+    const url = queryString ? `${API_BASE}/songs?${queryString}` : `${API_BASE}/songs`
+
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
