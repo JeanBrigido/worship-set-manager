@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
-import { Role, SuggestionStatus } from "@prisma/client";
+import { Role, SuggestionStatus, SlotStatus } from "@prisma/client";
 
 interface JwtPayload {
   userId: string;
@@ -89,9 +89,24 @@ export const createSuggestion = async (req: Request & { user?: JwtPayload }, res
       data: { slotId, songId, youtubeUrlOverride, notes },
       include: {
         song: true,
-        suggestionSlot: true
+        suggestionSlot: {
+          include: {
+            _count: {
+              select: { suggestions: true }
+            }
+          }
+        }
       }
     });
+
+    // Auto-update slot status to 'submitted' when min requirements met
+    const suggestionCount = suggestion.suggestionSlot._count.suggestions;
+    if (slot.status === SlotStatus.pending && suggestionCount >= slot.minSongs) {
+      await prisma.suggestionSlot.update({
+        where: { id: slotId },
+        data: { status: SlotStatus.submitted }
+      });
+    }
 
     res.status(201).json({ data: suggestion });
   } catch (err) {
