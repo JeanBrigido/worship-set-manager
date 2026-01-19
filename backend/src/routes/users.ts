@@ -1,6 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import * as usersController from "../controllers/usersController";
+import * as authController from "../controllers/authController";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { requireRole } from "../middleware/requireRole";
 import { validateRequest } from "../middleware/validateRequest";
@@ -41,6 +42,31 @@ router.post(
 
 // Public login
 router.post("/login", loginLimiter, usersController.login);
+
+// Rate limiter for password reset
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 requests per hour
+  message: { error: "Too many password reset attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Forgot password (request reset email)
+router.post(
+  "/forgot-password",
+  passwordResetLimiter,
+  validateRequest("forgotPasswordSchema"),
+  authController.forgotPassword
+);
+
+// Reset password (with token)
+router.post(
+  "/reset-password",
+  passwordResetLimiter,
+  validateRequest("resetPasswordSchema"),
+  authController.resetPassword
+);
 
 // Get current logged-in user
 router.get("/me", authMiddleware, usersController.getMe);

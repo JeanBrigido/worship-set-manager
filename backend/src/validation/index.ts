@@ -1,4 +1,5 @@
 export * from "./usersSchemas";
+export * from "./authSchemas";
 export * from "./servicesSchemas";
 export * from "./serviceTypesSchemas";
 export * from "./worshipSetsSchemas";
