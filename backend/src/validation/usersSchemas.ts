@@ -32,3 +32,7 @@ export const updateUserSchema = z.object({
 export const toggleUserActiveSchema = z.object({
   isActive: z.boolean(),
 });
+
+export const updateUserRolesSchema = z.object({
+  roles: z.array(z.nativeEnum(Role)).min(1, 'At least one role is required'),
+});

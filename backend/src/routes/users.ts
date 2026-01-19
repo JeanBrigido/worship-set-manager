@@ -114,4 +114,14 @@ router.patch(
   usersController.toggleUserActive
 );
 
+// Admin only: quick role update
+router.patch(
+  "/:id/roles",
+  authMiddleware,
+  validateUuid('id'),
+  requireRole([Role.admin]),
+  validateRequest("updateUserRolesSchema"),
+  usersController.updateUserRoles
+);
+
 export default router;

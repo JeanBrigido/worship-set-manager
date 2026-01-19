@@ -358,3 +358,44 @@ export const toggleUserActive = async (req: Request & { user?: JwtPayload }, res
     res.status(500).json({ error: 'Failed to update user status' });
   }
 };
+
+/**
+ * PATCH /users/:id/roles
+ * Quick role update (Admin only)
+ */
+export const updateUserRoles = async (req: Request & { user?: JwtPayload }, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { roles } = req.body;
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent removing your own admin role
+    if (req.user?.userId === id && existingUser.roles.includes(Role.admin) && !roles.includes(Role.admin)) {
+      return res.status(400).json({ error: 'You cannot remove your own admin role' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { roles },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({ data: user });
+  } catch (err) {
+    console.error('Error updating user roles:', err);
+    res.status(500).json({ error: 'Failed to update user roles' });
+  }
+};
