@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
-import { Role } from "@prisma/client";
+import { Role, SuggestionStatus } from "@prisma/client";
 
 interface JwtPayload {
   userId: string;
@@ -273,13 +273,16 @@ export const approveSuggestion = async (req: Request & { user?: JwtPayload }, re
       });
     }
 
-    // Mark suggestion as approved (we can use deletion as approval for now, or add a status field)
-    // For now, we'll just delete the suggestion after approval
-    await prisma.suggestion.delete({ where: { id } });
+    // Mark suggestion as approved
+    const updatedSuggestion = await prisma.suggestion.update({
+      where: { id },
+      data: { status: SuggestionStatus.approved }
+    });
 
     res.json({
       data: {
-        message: addToSet ? "Suggestion approved and added to worship set" : "Suggestion approved"
+        message: addToSet ? "Suggestion approved and added to worship set" : "Suggestion approved",
+        suggestion: updatedSuggestion
       }
     });
   } catch (err) {
@@ -321,10 +324,13 @@ export const rejectSuggestion = async (req: Request & { user?: JwtPayload }, res
       });
     }
 
-    // Delete the suggestion to reject it
-    await prisma.suggestion.delete({ where: { id } });
+    // Mark suggestion as rejected
+    const updatedSuggestion = await prisma.suggestion.update({
+      where: { id },
+      data: { status: SuggestionStatus.rejected }
+    });
 
-    res.json({ data: { message: "Suggestion rejected" } });
+    res.json({ data: { message: "Suggestion rejected", suggestion: updatedSuggestion } });
   } catch (err) {
     console.error("Error rejecting suggestion:", err);
     res.status(500).json({ error: { message: "Could not reject suggestion" } });

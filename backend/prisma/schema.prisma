@@ -137,13 +137,15 @@ model SuggestionSlot {
 }
 
 model Suggestion {
-  id                 String         @id @default(uuid())
+  id                 String           @id @default(uuid())
   slotId             String
   songId             String
   youtubeUrlOverride String?
   notes              String?
-  suggestionSlot     SuggestionSlot @relation(fields: [slotId], references: [id])
-  song               Song           @relation(fields: [songId], references: [id])
+  status             SuggestionStatus @default(pending)
+  createdAt          DateTime         @default(now())
+  suggestionSlot     SuggestionSlot   @relation(fields: [slotId], references: [id])
+  song               Song             @relation(fields: [songId], references: [id])
 }
 
 /// ///////////////////////////////////////////////////
@@ -295,6 +297,12 @@ enum SlotStatus {
   pending
   submitted
   missed
+}
+
+enum SuggestionStatus {
+  pending
+  approved
+  rejected
 }
 
 enum AssignmentStatus {
