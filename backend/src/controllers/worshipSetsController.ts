@@ -35,7 +35,7 @@ export const listWorshipSets = async (req: Request & { user?: JwtPayload }, res:
     res.json({ data: sets });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch worship sets" });
+    res.status(500).json({ error: { message: "Could not fetch worship sets" } });
   }
 };
 
@@ -71,11 +71,11 @@ export const getWorshipSet = async (req: Request & { user?: JwtPayload }, res: R
       },
     });
 
-    if (!set) return res.status(404).json({ error: "Worship set not found" });
+    if (!set) return res.status(404).json({ error: { message: "Worship set not found" } });
     res.json({ data: set });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch worship set" });
+    res.status(500).json({ error: { message: "Could not fetch worship set" } });
   }
 };
 
@@ -86,7 +86,7 @@ export const getWorshipSet = async (req: Request & { user?: JwtPayload }, res: R
 export const createWorshipSet = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { serviceId, suggestDueAt, notes } = req.body;
@@ -98,7 +98,7 @@ export const createWorshipSet = async (req: Request & { user?: JwtPayload }, res
     });
 
     if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+      return res.status(404).json({ error: { message: "Service not found" } });
     }
 
     // Create worship set and assignments in a transaction
@@ -149,7 +149,7 @@ export const createWorshipSet = async (req: Request & { user?: JwtPayload }, res
     res.status(201).json({ data: setWithAssignments });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create worship set" });
+    res.status(500).json({ error: { message: "Could not create worship set" } });
   }
 };
 
@@ -159,7 +159,7 @@ export const createWorshipSet = async (req: Request & { user?: JwtPayload }, res
 export const updateWorshipSet = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -172,7 +172,7 @@ export const updateWorshipSet = async (req: Request & { user?: JwtPayload }, res
     });
 
     if (!existingSet) {
-      return res.status(404).json({ error: "Worship set not found" });
+      return res.status(404).json({ error: { message: "Worship set not found" } });
     }
 
     // Validate song constraints if publishing
@@ -214,7 +214,7 @@ export const updateWorshipSet = async (req: Request & { user?: JwtPayload }, res
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update worship set" });
+    res.status(500).json({ error: { message: "Could not update worship set" } });
   }
 };
 
@@ -224,7 +224,7 @@ export const updateWorshipSet = async (req: Request & { user?: JwtPayload }, res
 export const publishWorshipSet = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -234,7 +234,7 @@ export const publishWorshipSet = async (req: Request & { user?: JwtPayload }, re
     return updateWorshipSet(req, res);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not publish worship set" });
+    res.status(500).json({ error: { message: "Could not publish worship set" } });
   }
 };
 
@@ -244,7 +244,7 @@ export const publishWorshipSet = async (req: Request & { user?: JwtPayload }, re
 export const deleteWorshipSet = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -254,7 +254,7 @@ export const deleteWorshipSet = async (req: Request & { user?: JwtPayload }, res
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete worship set" });
+    res.status(500).json({ error: { message: "Could not delete worship set" } });
   }
 };
 

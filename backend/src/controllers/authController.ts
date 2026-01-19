@@ -53,7 +53,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     res.json(successResponse);
   } catch (err) {
     console.error('Forgot password error:', err);
-    res.status(500).json({ error: 'Failed to process request' });
+    res.status(500).json({ error: { message: 'Failed to process request' } });
   }
 };
 
@@ -74,15 +74,15 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!resetToken) {
-      return res.status(400).json({ error: 'Invalid or expired reset link' });
+      return res.status(400).json({ error: { message: 'Invalid or expired reset link' } });
     }
 
     if (resetToken.usedAt) {
-      return res.status(400).json({ error: 'This reset link has already been used' });
+      return res.status(400).json({ error: { message: 'This reset link has already been used' } });
     }
 
     if (resetToken.expiresAt < new Date()) {
-      return res.status(400).json({ error: 'This reset link has expired' });
+      return res.status(400).json({ error: { message: 'This reset link has expired' } });
     }
 
     // Hash new password
@@ -103,6 +103,6 @@ export const resetPassword = async (req: Request, res: Response) => {
     res.json({ message: 'Password has been reset successfully' });
   } catch (err) {
     console.error('Reset password error:', err);
-    res.status(500).json({ error: 'Failed to reset password' });
+    res.status(500).json({ error: { message: 'Failed to reset password' } });
   }
 };

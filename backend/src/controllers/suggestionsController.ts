@@ -20,7 +20,7 @@ export const listSuggestionsForSlot = async (req: Request & { user?: JwtPayload 
     res.json({ data: suggestions });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list suggestions" });
+    res.status(500).json({ error: { message: "Could not list suggestions" } });
   }
 };
 
@@ -34,11 +34,11 @@ export const getSuggestion = async (req: Request & { user?: JwtPayload }, res: R
       where: { id },
       include: { song: true },
     });
-    if (!suggestion) return res.status(404).json({ error: "Suggestion not found" });
+    if (!suggestion) return res.status(404).json({ error: { message: "Suggestion not found" } });
     res.json({ data: suggestion });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch suggestion" });
+    res.status(500).json({ error: { message: "Could not fetch suggestion" } });
   }
 };
 
@@ -54,7 +54,7 @@ export const createSuggestion = async (req: Request & { user?: JwtPayload }, res
       where: { id: slotId },
     });
 
-    if (!slot) return res.status(404).json({ error: "Slot not found" });
+    if (!slot) return res.status(404).json({ error: { message: "Slot not found" } });
 
     // Check if suggestions are still allowed (before slot due date)
     if (slot.dueAt && new Date() > slot.dueAt) {
@@ -65,7 +65,7 @@ export const createSuggestion = async (req: Request & { user?: JwtPayload }, res
 
     // Only the assigned user can add suggestions to their slot
     if (slot.assignedUserId !== req.user?.userId && !req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     // Check for duplicate suggestions (same user, same slot, same song)
@@ -111,7 +111,7 @@ export const createSuggestion = async (req: Request & { user?: JwtPayload }, res
     res.status(201).json({ data: suggestion });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create suggestion" });
+    res.status(500).json({ error: { message: "Could not create suggestion" } });
   }
 };
 
@@ -124,14 +124,14 @@ export const updateSuggestion = async (req: Request & { user?: JwtPayload }, res
     const { youtubeUrlOverride, notes } = req.body;
 
     const suggestion = await prisma.suggestion.findUnique({ where: { id }, include: { suggestionSlot: true } });
-    if (!suggestion) return res.status(404).json({ error: "Suggestion not found" });
+    if (!suggestion) return res.status(404).json({ error: { message: "Suggestion not found" } });
 
     // Only the assigned user or Admin can update
     if (
       suggestion.suggestionSlot.assignedUserId !== req.user?.userId &&
       !req.user?.roles.includes(Role.admin)
     ) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const updated = await prisma.suggestion.update({
@@ -142,7 +142,7 @@ export const updateSuggestion = async (req: Request & { user?: JwtPayload }, res
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update suggestion" });
+    res.status(500).json({ error: { message: "Could not update suggestion" } });
   }
 };
 
@@ -154,14 +154,14 @@ export const deleteSuggestion = async (req: Request & { user?: JwtPayload }, res
     const { id } = req.params;
 
     const suggestion = await prisma.suggestion.findUnique({ where: { id }, include: { suggestionSlot: true } });
-    if (!suggestion) return res.status(404).json({ error: "Suggestion not found" });
+    if (!suggestion) return res.status(404).json({ error: { message: "Suggestion not found" } });
 
     if (
       suggestion.suggestionSlot.assignedUserId !== req.user?.userId &&
       !req.user?.roles.includes(Role.admin) &&
       !req.user?.roles.includes(Role.leader)
     ) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     await prisma.suggestion.delete({ where: { id } });
@@ -169,7 +169,7 @@ export const deleteSuggestion = async (req: Request & { user?: JwtPayload }, res
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete suggestion" });
+    res.status(500).json({ error: { message: "Could not delete suggestion" } });
   }
 };
 

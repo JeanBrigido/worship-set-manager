@@ -21,7 +21,7 @@ export const listSetSongs = async (req: Request & { user?: JwtPayload }, res: Re
     res.json({ data: songs });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list set songs" });
+    res.status(500).json({ error: { message: "Could not list set songs" } });
   }
 };
 
@@ -35,11 +35,11 @@ export const getSetSong = async (req: Request & { user?: JwtPayload }, res: Resp
       where: { id },
       include: { songVersion: { include: { song: true } } },
     });
-    if (!song) return res.status(404).json({ error: "Set song not found" });
+    if (!song) return res.status(404).json({ error: { message: "Set song not found" } });
     res.json({ data: song });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch set song" });
+    res.status(500).json({ error: { message: "Could not fetch set song" } });
   }
 };
 
@@ -49,7 +49,7 @@ export const getSetSong = async (req: Request & { user?: JwtPayload }, res: Resp
 export const createSetSong = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { setId, songVersionId, position, keyOverride, youtubeUrlOverride, isNew, notes } = req.body;
@@ -86,7 +86,7 @@ export const createSetSong = async (req: Request & { user?: JwtPayload }, res: R
     res.status(201).json({ data: song });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not add song to set" });
+    res.status(500).json({ error: { message: "Could not add song to set" } });
   }
 };
 
@@ -96,7 +96,7 @@ export const createSetSong = async (req: Request & { user?: JwtPayload }, res: R
 export const updateSetSong = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -110,7 +110,7 @@ export const updateSetSong = async (req: Request & { user?: JwtPayload }, res: R
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update set song" });
+    res.status(500).json({ error: { message: "Could not update set song" } });
   }
 };
 
@@ -120,7 +120,7 @@ export const updateSetSong = async (req: Request & { user?: JwtPayload }, res: R
 export const deleteSetSong = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -132,7 +132,7 @@ export const deleteSetSong = async (req: Request & { user?: JwtPayload }, res: R
     });
 
     if (!setSong) {
-      return res.status(404).json({ error: "Set song not found" });
+      return res.status(404).json({ error: { message: "Set song not found" } });
     }
 
     // Use a transaction to delete and reorder in one atomic operation
@@ -155,7 +155,7 @@ export const deleteSetSong = async (req: Request & { user?: JwtPayload }, res: R
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete set song" });
+    res.status(500).json({ error: { message: "Could not delete set song" } });
   }
 };
 
@@ -166,14 +166,14 @@ export const deleteSetSong = async (req: Request & { user?: JwtPayload }, res: R
 export const reorderSetSongs = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { setId } = req.params;
     const { songIds } = req.body as { songIds: string[] };
 
     if (!Array.isArray(songIds) || songIds.length === 0) {
-      return res.status(400).json({ error: "songIds must be a non-empty array" });
+      return res.status(400).json({ error: { message: "songIds must be a non-empty array" } });
     }
 
     // Verify all song IDs belong to this set
@@ -212,6 +212,6 @@ export const reorderSetSongs = async (req: Request & { user?: JwtPayload }, res:
     res.json({ data: reorderedSongs });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not reorder songs" });
+    res.status(500).json({ error: { message: "Could not reorder songs" } });
   }
 };

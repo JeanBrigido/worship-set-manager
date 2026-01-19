@@ -16,7 +16,7 @@ export const listForUser = async (req: Request & { user?: JwtPayload }, res: Res
 
     // Allow self or Admin/Leader
     if (req.user?.userId !== userId && !req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const logs = await prisma.notificationLog.findMany({
@@ -27,7 +27,7 @@ export const listForUser = async (req: Request & { user?: JwtPayload }, res: Res
     res.json({ data: logs });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list notifications" });
+    res.status(500).json({ error: { message: "Could not list notifications" } });
   }
 };
 
@@ -39,16 +39,16 @@ export const getNotification = async (req: Request & { user?: JwtPayload }, res:
     const { id } = req.params;
 
     const log = await prisma.notificationLog.findUnique({ where: { id } });
-    if (!log) return res.status(404).json({ error: "Notification not found" });
+    if (!log) return res.status(404).json({ error: { message: "Notification not found" } });
 
     if (log.userId !== req.user?.userId && !req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     res.json({ data: log });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch notification" });
+    res.status(500).json({ error: { message: "Could not fetch notification" } });
   }
 };
 
@@ -58,7 +58,7 @@ export const getNotification = async (req: Request & { user?: JwtPayload }, res:
 export const createNotification = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { userId, channel, templateKey, payloadJson, status } = req.body;
@@ -77,6 +77,6 @@ export const createNotification = async (req: Request & { user?: JwtPayload }, r
     res.status(201).json({ data: log });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create notification" });
+    res.status(500).json({ error: { message: "Could not create notification" } });
   }
 };

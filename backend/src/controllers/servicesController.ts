@@ -202,7 +202,7 @@ export const updateService = async (req: Request & { user?: JwtPayload }, res: R
 export const deleteService = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -212,7 +212,7 @@ export const deleteService = async (req: Request & { user?: JwtPayload }, res: R
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete service" });
+    res.status(500).json({ error: { message: "Could not delete service" } });
   }
 };
 
@@ -241,7 +241,7 @@ export const getServiceAssignments = async (req: Request & { user?: JwtPayload }
     });
 
     if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+      return res.status(404).json({ error: { message: "Service not found" } });
     }
 
     // Return assignments from the worship set
@@ -249,7 +249,7 @@ export const getServiceAssignments = async (req: Request & { user?: JwtPayload }
     res.json({ data: assignments });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch service assignments" });
+    res.status(500).json({ error: { message: "Could not fetch service assignments" } });
   }
 };
 
@@ -259,7 +259,7 @@ export const getServiceAssignments = async (req: Request & { user?: JwtPayload }
 export const updateServiceAssignments = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -274,11 +274,11 @@ export const updateServiceAssignments = async (req: Request & { user?: JwtPayloa
     });
 
     if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+      return res.status(404).json({ error: { message: "Service not found" } });
     }
 
     if (!service.worshipSet) {
-      return res.status(400).json({ error: "Service does not have a worship set" });
+      return res.status(400).json({ error: { message: "Service does not have a worship set" } });
     }
 
     const setId = service.worshipSet.id;
@@ -319,6 +319,6 @@ export const updateServiceAssignments = async (req: Request & { user?: JwtPayloa
     res.json({ data: updatedAssignments });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update service assignments" });
+    res.status(500).json({ error: { message: "Could not update service assignments" } });
   }
 };

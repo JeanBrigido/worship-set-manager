@@ -33,7 +33,7 @@ export const listDefaultAssignments = async (req: Request & { user?: JwtPayload 
     res.json({ data: assignments });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch default assignments" });
+    res.status(500).json({ error: { message: "Could not fetch default assignments" } });
   }
 };
 
@@ -54,13 +54,13 @@ export const getDefaultAssignment = async (req: Request & { user?: JwtPayload },
     });
 
     if (!assignment) {
-      return res.status(404).json({ error: "Default assignment not found" });
+      return res.status(404).json({ error: { message: "Default assignment not found" } });
     }
 
     res.json({ data: assignment });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch default assignment" });
+    res.status(500).json({ error: { message: "Could not fetch default assignment" } });
   }
 };
 
@@ -71,7 +71,7 @@ export const getDefaultAssignment = async (req: Request & { user?: JwtPayload },
 export const createDefaultAssignment = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { serviceTypeId, instrumentId, userId } = req.body;
@@ -110,7 +110,7 @@ export const createDefaultAssignment = async (req: Request & { user?: JwtPayload
         error: "A default assignment already exists for this service type and instrument",
       });
     }
-    res.status(500).json({ error: "Could not create default assignment" });
+    res.status(500).json({ error: { message: "Could not create default assignment" } });
   }
 };
 
@@ -121,7 +121,7 @@ export const createDefaultAssignment = async (req: Request & { user?: JwtPayload
 export const updateDefaultAssignment = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -141,9 +141,9 @@ export const updateDefaultAssignment = async (req: Request & { user?: JwtPayload
   } catch (err: any) {
     console.error(err);
     if (err.code === "P2025") {
-      return res.status(404).json({ error: "Default assignment not found" });
+      return res.status(404).json({ error: { message: "Default assignment not found" } });
     }
-    res.status(500).json({ error: "Could not update default assignment" });
+    res.status(500).json({ error: { message: "Could not update default assignment" } });
   }
 };
 
@@ -154,7 +154,7 @@ export const updateDefaultAssignment = async (req: Request & { user?: JwtPayload
 export const deleteDefaultAssignment = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -165,8 +165,8 @@ export const deleteDefaultAssignment = async (req: Request & { user?: JwtPayload
   } catch (err: any) {
     console.error(err);
     if (err.code === "P2025") {
-      return res.status(404).json({ error: "Default assignment not found" });
+      return res.status(404).json({ error: { message: "Default assignment not found" } });
     }
-    res.status(500).json({ error: "Could not delete default assignment" });
+    res.status(500).json({ error: { message: "Could not delete default assignment" } });
   }
 };

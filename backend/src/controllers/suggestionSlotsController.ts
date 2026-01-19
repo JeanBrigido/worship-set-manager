@@ -20,7 +20,7 @@ export const listSlotsForSet = async (req: Request & { user?: JwtPayload }, res:
     res.json({ data: slots });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list slots" });
+    res.status(500).json({ error: { message: "Could not list slots" } });
   }
 };
 
@@ -34,11 +34,11 @@ export const getSlot = async (req: Request & { user?: JwtPayload }, res: Respons
       where: { id },
       include: { assignedUser: true, suggestions: true },
     });
-    if (!slot) return res.status(404).json({ error: "Slot not found" });
+    if (!slot) return res.status(404).json({ error: { message: "Slot not found" } });
     res.json({ data: slot });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch slot" });
+    res.status(500).json({ error: { message: "Could not fetch slot" } });
   }
 };
 
@@ -48,7 +48,7 @@ export const getSlot = async (req: Request & { user?: JwtPayload }, res: Respons
 export const createSlot = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { setId, assignedUserId, minSongs, maxSongs, dueAt } = req.body;
@@ -66,7 +66,7 @@ export const createSlot = async (req: Request & { user?: JwtPayload }, res: Resp
     res.status(201).json({ data: slot });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create slot" });
+    res.status(500).json({ error: { message: "Could not create slot" } });
   }
 };
 
@@ -76,7 +76,7 @@ export const createSlot = async (req: Request & { user?: JwtPayload }, res: Resp
 export const updateSlot = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -95,7 +95,7 @@ export const updateSlot = async (req: Request & { user?: JwtPayload }, res: Resp
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update slot" });
+    res.status(500).json({ error: { message: "Could not update slot" } });
   }
 };
 
@@ -105,7 +105,7 @@ export const updateSlot = async (req: Request & { user?: JwtPayload }, res: Resp
 export const deleteSlot = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -115,7 +115,7 @@ export const deleteSlot = async (req: Request & { user?: JwtPayload }, res: Resp
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete slot" });
+    res.status(500).json({ error: { message: "Could not delete slot" } });
   }
 };
 

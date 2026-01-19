@@ -20,7 +20,7 @@ export const listVersionsForSong = async (req: Request & { user?: JwtPayload }, 
     res.json({ data: versions });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list versions" });
+    res.status(500).json({ error: { message: "Could not list versions" } });
   }
 };
 
@@ -31,11 +31,11 @@ export const getVersion = async (req: Request & { user?: JwtPayload }, res: Resp
   try {
     const { id } = req.params;
     const version = await prisma.songVersion.findUnique({ where: { id } });
-    if (!version) return res.status(404).json({ error: "Song version not found" });
+    if (!version) return res.status(404).json({ error: { message: "Song version not found" } });
     res.json({ data: version });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch song version" });
+    res.status(500).json({ error: { message: "Could not fetch song version" } });
   }
 };
 
@@ -45,7 +45,7 @@ export const getVersion = async (req: Request & { user?: JwtPayload }, res: Resp
 export const createVersion = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { songId, name, youtubeUrl, defaultKey, bpm, notes } = req.body;
@@ -57,7 +57,7 @@ export const createVersion = async (req: Request & { user?: JwtPayload }, res: R
     res.status(201).json({ data: version });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create version" });
+    res.status(500).json({ error: { message: "Could not create version" } });
   }
 };
 
@@ -67,7 +67,7 @@ export const createVersion = async (req: Request & { user?: JwtPayload }, res: R
 export const updateVersion = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -81,7 +81,7 @@ export const updateVersion = async (req: Request & { user?: JwtPayload }, res: R
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update version" });
+    res.status(500).json({ error: { message: "Could not update version" } });
   }
 };
 
@@ -91,7 +91,7 @@ export const updateVersion = async (req: Request & { user?: JwtPayload }, res: R
 export const deleteVersion = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -101,6 +101,6 @@ export const deleteVersion = async (req: Request & { user?: JwtPayload }, res: R
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete version" });
+    res.status(500).json({ error: { message: "Could not delete version" } });
   }
 };

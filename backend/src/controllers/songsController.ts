@@ -61,7 +61,7 @@ export const listSongs = async (req: Request & { user?: JwtPayload }, res: Respo
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list songs" });
+    res.status(500).json({ error: { message: "Could not list songs" } });
   }
 };
 
@@ -75,23 +75,20 @@ export const getSong = async (req: Request & { user?: JwtPayload }, res: Respons
       where: { id },
       include: { versions: true },
     });
-    if (!song) return res.status(404).json({ error: "Song not found" });
+    if (!song) return res.status(404).json({ error: { message: "Song not found" } });
     res.json({ data: song });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch song" });
+    res.status(500).json({ error: { message: "Could not fetch song" } });
   }
 };
 
 /**
  * POST /songs
+ * Authorization handled by route middleware (admin, leader, musician)
  */
 export const createSong = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
-    if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
-
     const { title, artist, ccliNumber, defaultYoutubeUrl, tags, language, familiarityScore } = req.body;
 
     const song = await prisma.song.create({
@@ -109,19 +106,16 @@ export const createSong = async (req: Request & { user?: JwtPayload }, res: Resp
     res.status(201).json({ data: song });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create song" });
+    res.status(500).json({ error: { message: "Could not create song" } });
   }
 };
 
 /**
  * PUT /songs/:id
+ * Authorization handled by route middleware (admin, leader, musician)
  */
 export const updateSong = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
-    if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
-
     const { id } = req.params;
     const { title, artist, ccliNumber, defaultYoutubeUrl, tags, language, familiarityScore, isActive } = req.body;
 
@@ -142,7 +136,7 @@ export const updateSong = async (req: Request & { user?: JwtPayload }, res: Resp
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update song" });
+    res.status(500).json({ error: { message: "Could not update song" } });
   }
 };
 
@@ -153,7 +147,7 @@ export const updateSong = async (req: Request & { user?: JwtPayload }, res: Resp
 export const deleteSong = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -166,6 +160,6 @@ export const deleteSong = async (req: Request & { user?: JwtPayload }, res: Resp
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete song" });
+    res.status(500).json({ error: { message: "Could not delete song" } });
   }
 };

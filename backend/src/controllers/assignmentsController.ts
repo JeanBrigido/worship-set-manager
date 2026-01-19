@@ -34,7 +34,7 @@ export const listAssignments = async (req: Request & { user?: JwtPayload }, res:
     res.json({ data: assignments });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list assignments" });
+    res.status(500).json({ error: { message: "Could not list assignments" } });
   }
 };
 
@@ -51,7 +51,7 @@ export const listAssignmentsForSet = async (req: Request & { user?: JwtPayload }
     res.json({ data: assignments });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list assignments" });
+    res.status(500).json({ error: { message: "Could not list assignments" } });
   }
 };
 
@@ -65,11 +65,11 @@ export const getAssignment = async (req: Request & { user?: JwtPayload }, res: R
       where: { id },
       include: { instrument: true, user: true },
     });
-    if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+    if (!assignment) return res.status(404).json({ error: { message: "Assignment not found" } });
     res.json({ data: assignment });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch assignment" });
+    res.status(500).json({ error: { message: "Could not fetch assignment" } });
   }
 };
 
@@ -87,7 +87,7 @@ export const createAssignment = async (req: Request & { user?: JwtPayload }, res
     });
 
     if (!worshipSet) {
-      return res.status(404).json({ error: "Worship set not found" });
+      return res.status(404).json({ error: { message: "Worship set not found" } });
     }
 
     const isAdmin = req.user?.roles.includes(Role.admin);
@@ -105,7 +105,7 @@ export const createAssignment = async (req: Request & { user?: JwtPayload }, res
     });
 
     if (!instrument) {
-      return res.status(404).json({ error: "Instrument not found" });
+      return res.status(404).json({ error: { message: "Instrument not found" } });
     }
 
     // Count existing assignments for this instrument in this set
@@ -155,7 +155,7 @@ export const createAssignment = async (req: Request & { user?: JwtPayload }, res
     res.status(201).json({ data: assignment });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create assignment" });
+    res.status(500).json({ error: { message: "Could not create assignment" } });
   }
 };
 
@@ -168,7 +168,7 @@ export const updateAssignment = async (req: Request & { user?: JwtPayload }, res
     const { status } = req.body;
 
     const assignment = await prisma.assignment.findUnique({ where: { id } });
-    if (!assignment) return res.status(404).json({ error: "Assignment not found" });
+    if (!assignment) return res.status(404).json({ error: { message: "Assignment not found" } });
 
     // Only Admin/Leader or the assigned user can update
     if (
@@ -176,7 +176,7 @@ export const updateAssignment = async (req: Request & { user?: JwtPayload }, res
       !req.user?.roles.includes(Role.admin) &&
       !req.user?.roles.includes(Role.leader)
     ) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const updated = await prisma.assignment.update({
@@ -190,7 +190,7 @@ export const updateAssignment = async (req: Request & { user?: JwtPayload }, res
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update assignment" });
+    res.status(500).json({ error: { message: "Could not update assignment" } });
   }
 };
 
@@ -200,7 +200,7 @@ export const updateAssignment = async (req: Request & { user?: JwtPayload }, res
 export const deleteAssignment = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -210,6 +210,6 @@ export const deleteAssignment = async (req: Request & { user?: JwtPayload }, res
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete assignment" });
+    res.status(500).json({ error: { message: "Could not delete assignment" } });
   }
 };

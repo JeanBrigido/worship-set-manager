@@ -16,7 +16,7 @@ export const listAvailabilityForUser = async (req: Request & { user?: JwtPayload
 
     // Allow self or Admin/Leader
     if (req.user?.userId !== userId && !req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const records = await prisma.availability.findMany({
@@ -27,7 +27,7 @@ export const listAvailabilityForUser = async (req: Request & { user?: JwtPayload
     res.json({ data: records });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list availability" });
+    res.status(500).json({ error: { message: "Could not list availability" } });
   }
 };
 
@@ -39,16 +39,16 @@ export const getAvailability = async (req: Request & { user?: JwtPayload }, res:
     const { id } = req.params;
 
     const record = await prisma.availability.findUnique({ where: { id } });
-    if (!record) return res.status(404).json({ error: "Availability not found" });
+    if (!record) return res.status(404).json({ error: { message: "Availability not found" } });
 
     if (record.userId !== req.user?.userId && !req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     res.json({ data: record });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch availability" });
+    res.status(500).json({ error: { message: "Could not fetch availability" } });
   }
 };
 
@@ -71,7 +71,7 @@ export const createAvailability = async (req: Request & { user?: JwtPayload }, r
     res.status(201).json({ data: record });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create availability" });
+    res.status(500).json({ error: { message: "Could not create availability" } });
   }
 };
 
@@ -84,10 +84,10 @@ export const updateAvailability = async (req: Request & { user?: JwtPayload }, r
     const { start, end, notes } = req.body;
 
     const record = await prisma.availability.findUnique({ where: { id } });
-    if (!record) return res.status(404).json({ error: "Availability not found" });
+    if (!record) return res.status(404).json({ error: { message: "Availability not found" } });
 
     if (record.userId !== req.user?.userId) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const updated = await prisma.availability.update({
@@ -102,7 +102,7 @@ export const updateAvailability = async (req: Request & { user?: JwtPayload }, r
     res.json({ data: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update availability" });
+    res.status(500).json({ error: { message: "Could not update availability" } });
   }
 };
 
@@ -114,10 +114,10 @@ export const deleteAvailability = async (req: Request & { user?: JwtPayload }, r
     const { id } = req.params;
 
     const record = await prisma.availability.findUnique({ where: { id } });
-    if (!record) return res.status(404).json({ error: "Availability not found" });
+    if (!record) return res.status(404).json({ error: { message: "Availability not found" } });
 
     if (record.userId !== req.user?.userId) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     await prisma.availability.delete({ where: { id } });
@@ -125,6 +125,6 @@ export const deleteAvailability = async (req: Request & { user?: JwtPayload }, r
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete availability" });
+    res.status(500).json({ error: { message: "Could not delete availability" } });
   }
 };

@@ -32,7 +32,7 @@ export const signup = async (req: Request, res: Response) => {
     res.status(201).json({ data: { id: user.id, email: user.email, name: user.name } });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create user" });
+    res.status(500).json({ error: { message: "Could not create user" } });
   }
 };
 
@@ -46,12 +46,12 @@ export const login = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.password) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: { message: "Invalid credentials" } });
     }
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: { message: "Invalid credentials" } });
     }
 
     const token = signToken({ userId: user.id, roles: user.roles });
@@ -69,7 +69,7 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Login failed" });
+    res.status(500).json({ error: { message: "Login failed" } });
   }
 };
 
@@ -81,7 +81,7 @@ export const login = async (req: Request, res: Response) => {
 export const getMe = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: { message: "Unauthorized" } });
     }
 
     const user = await prisma.user.findUnique({
@@ -89,7 +89,7 @@ export const getMe = async (req: Request & { user?: JwtPayload }, res: Response)
     });
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: { message: "User not found" } });
     }
 
     res.json({
@@ -103,7 +103,7 @@ export const getMe = async (req: Request & { user?: JwtPayload }, res: Response)
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch user" });
+    res.status(500).json({ error: { message: "Could not fetch user" } });
   }
 };
 
@@ -114,7 +114,7 @@ export const getMe = async (req: Request & { user?: JwtPayload }, res: Response)
 export const listUsers = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const users = await prisma.user.findMany();
@@ -132,7 +132,7 @@ export const listUsers = async (req: Request & { user?: JwtPayload }, res: Respo
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not list users" });
+    res.status(500).json({ error: { message: "Could not list users" } });
   }
 };
 
@@ -143,14 +143,14 @@ export const listUsers = async (req: Request & { user?: JwtPayload }, res: Respo
 export const createUser = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { name, email, phoneE164, roles, password } = req.body;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(400).json({ error: "Email already in use" });
+      return res.status(400).json({ error: { message: "Email already in use" } });
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -174,7 +174,7 @@ export const createUser = async (req: Request & { user?: JwtPayload }, res: Resp
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not create user" });
+    res.status(500).json({ error: { message: "Could not create user" } });
   }
 };
 
@@ -190,7 +190,7 @@ export const updateUser = async (req: Request & { user?: JwtPayload }, res: Resp
     const currentUser = req.user;
 
     if (!currentUser) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: { message: "Unauthorized" } });
     }
 
     // Check if user is updating their own profile or is an admin
@@ -198,7 +198,7 @@ export const updateUser = async (req: Request & { user?: JwtPayload }, res: Resp
     const isAdmin = currentUser.roles.includes(Role.admin);
 
     if (!isOwnProfile && !isAdmin) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { name, email, phoneE164, roles, password } = req.body;
@@ -213,7 +213,7 @@ export const updateUser = async (req: Request & { user?: JwtPayload }, res: Resp
     // Only admins can update roles
     if (roles !== undefined) {
       if (!isAdmin) {
-        return res.status(403).json({ error: "Only admins can update roles" });
+        return res.status(403).json({ error: { message: "Only admins can update roles" } });
       }
       data.roles = roles;
     }
@@ -221,7 +221,7 @@ export const updateUser = async (req: Request & { user?: JwtPayload }, res: Resp
     // Only admins can update passwords (users should use password change endpoint)
     if (password !== undefined) {
       if (!isAdmin) {
-        return res.status(403).json({ error: "Use password change endpoint to update password" });
+        return res.status(403).json({ error: { message: "Use password change endpoint to update password" } });
       }
       data.password = await bcrypt.hash(password, 10);
     }
@@ -242,7 +242,7 @@ export const updateUser = async (req: Request & { user?: JwtPayload }, res: Resp
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not update user" });
+    res.status(500).json({ error: { message: "Could not update user" } });
   }
 };
 
@@ -256,12 +256,12 @@ export const getUser = async (req: Request & { user?: JwtPayload }, res: Respons
     const currentUser = req.user;
 
     if (!currentUser) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: { message: "Unauthorized" } });
     }
 
     // Check if user is trying to access their own profile or is an admin
     if (currentUser.userId !== id && !currentUser.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const user = await prisma.user.findUnique({
@@ -279,7 +279,7 @@ export const getUser = async (req: Request & { user?: JwtPayload }, res: Respons
     });
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: { message: "User not found" } });
     }
 
     res.json({
@@ -296,7 +296,7 @@ export const getUser = async (req: Request & { user?: JwtPayload }, res: Respons
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not fetch user" });
+    res.status(500).json({ error: { message: "Could not fetch user" } });
   }
 };
 
@@ -307,7 +307,7 @@ export const getUser = async (req: Request & { user?: JwtPayload }, res: Respons
 export const deleteUser = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
     if (!req.user?.roles.includes(Role.admin)) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     const { id } = req.params;
@@ -317,7 +317,7 @@ export const deleteUser = async (req: Request & { user?: JwtPayload }, res: Resp
     res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not delete user" });
+    res.status(500).json({ error: { message: "Could not delete user" } });
   }
 };
 
