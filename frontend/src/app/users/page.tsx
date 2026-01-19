@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Users, Plus, Edit, Trash2, Mail, Shield, Search } from 'lucide-react'
+import { UserSection } from '@/components/users'
+import { Users, Plus, Search } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 
 interface User {
@@ -29,15 +29,13 @@ export default function UsersPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const [users, setUsers] = useState<User[]>([])
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState('all')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [deactivateUser, setDeactivateUser] = useState<User | null>(null)
+  const [deleteUser, setDeleteUser] = useState<User | null>(null)
   const { toast } = useToast()
 
-  // Form state for creating/editing users
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -45,13 +43,9 @@ export default function UsersPage() {
     password: ''
   })
 
-  // Check if user is admin
   const isAdmin = session?.user?.roles?.includes('admin')
+  const currentUserId = session?.user?.id
 
-  // Show loading while session is being fetched
-  const isLoading = !session
-
-  // Redirect if not admin (use useEffect to avoid hook order issues)
   useEffect(() => {
     if (session && !isAdmin) {
       router.push('/')
@@ -63,47 +57,18 @@ export default function UsersPage() {
       setLoading(true)
       const { data, error } = await apiClient.get('/users')
       if (error) {
-        if (error.code === 'FORBIDDEN') {
-          toast({
-            title: 'Access Denied',
-            description: 'You do not have permission to view users.',
-            variant: 'destructive',
-          })
-        } else {
-          throw new Error(error.message)
-        }
-      } else if (data) {
-        setUsers(data)
+        throw new Error(error.message)
       }
+      setUsers(data || [])
     } catch (error) {
-      console.error('Error fetching users:', error)
       toast({
         title: 'Error',
-        description: 'Failed to load users. Please try again.',
+        description: 'Failed to load users.',
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
     }
-  }
-
-  const filterUsers = () => {
-    let filtered = users
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    // Filter by role
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.roles.includes(roleFilter))
-    }
-
-    setFilteredUsers(filtered)
   }
 
   useEffect(() => {
@@ -112,9 +77,142 @@ export default function UsersPage() {
     }
   }, [isAdmin])
 
-  useEffect(() => {
-    filterUsers()
-  }, [users, searchTerm, roleFilter])
+  // Filter and group users
+  const { admins, leaders, musicians, inactive } = useMemo(() => {
+    const filtered = searchTerm
+      ? users.filter(
+          (u) =>
+            u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : users
+
+    const active = filtered.filter((u) => u.isActive)
+    const inactiveUsers = filtered.filter((u) => !u.isActive)
+
+    // Group by highest privilege role
+    const adminUsers = active.filter((u) => u.roles.includes('admin'))
+    const leaderUsers = active.filter(
+      (u) => !u.roles.includes('admin') && u.roles.includes('leader')
+    )
+    const musicianUsers = active.filter(
+      (u) =>
+        !u.roles.includes('admin') &&
+        !u.roles.includes('leader') &&
+        u.roles.includes('musician')
+    )
+
+    return { admins: adminUsers, leaders: leaderUsers, musicians: musicianUsers, inactive: inactiveUsers }
+  }, [users, searchTerm])
+
+  const handleRolesChange = async (userId: string, roles: string[]) => {
+    const { error } = await apiClient.request(`/users/${userId}/roles`, {
+      method: 'PATCH',
+      body: JSON.stringify({ roles }),
+    })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, roles } : u))
+    )
+
+    const user = users.find((u) => u.id === userId)
+    toast({
+      title: 'Roles updated',
+      description: `Updated roles for ${user?.name}`,
+    })
+  }
+
+  const handleActivate = async (userId: string) => {
+    const { error } = await apiClient.request(`/users/${userId}/active`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive: true }),
+    })
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, isActive: true } : u))
+    )
+
+    const user = users.find((u) => u.id === userId)
+    toast({
+      title: 'User activated',
+      description: `Activated ${user?.name}`,
+    })
+  }
+
+  const handleDeactivate = async (userId: string) => {
+    const user = users.find((u) => u.id === userId)
+    setDeactivateUser(user || null)
+  }
+
+  const confirmDeactivate = async () => {
+    if (!deactivateUser) return
+
+    const { error } = await apiClient.request(`/users/${deactivateUser.id}/active`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive: false }),
+    })
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+      setDeactivateUser(null)
+      return
+    }
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === deactivateUser.id ? { ...u, isActive: false } : u))
+    )
+
+    toast({
+      title: 'User deactivated',
+      description: `Deactivated ${deactivateUser.name}`,
+    })
+    setDeactivateUser(null)
+  }
+
+  const handleDelete = async (userId: string, userName: string) => {
+    const user = users.find((u) => u.id === userId)
+    setDeleteUser(user || null)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteUser) return
+
+    const { error } = await apiClient.delete(`/users/${deleteUser.id}`)
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+      setDeleteUser(null)
+      return
+    }
+
+    setUsers((prev) => prev.filter((u) => u.id !== deleteUser.id))
+    toast({
+      title: 'User deleted',
+      description: `Deleted ${deleteUser.name}`,
+    })
+    setDeleteUser(null)
+  }
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -129,7 +227,7 @@ export default function UsersPage() {
     }
 
     try {
-      const { data, error } = await apiClient.post('/users', formData)
+      const { error } = await apiClient.post('/users', formData)
 
       if (error) {
         throw new Error(error.message)
@@ -140,148 +238,34 @@ export default function UsersPage() {
         description: 'User created successfully.',
       })
       setIsCreateDialogOpen(false)
-      resetForm()
+      setFormData({ name: '', email: '', roles: [], password: '' })
       fetchUsers()
     } catch (error) {
-      console.error('Error creating user:', error)
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create user. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to create user.',
         variant: 'destructive',
       })
     }
-  }
-
-  const handleEditUser = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!editingUser || !formData.name || !formData.email || formData.roles.length === 0) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    try {
-      const updateData = {
-        name: formData.name,
-        email: formData.email,
-        roles: formData.roles,
-        ...(formData.password && { password: formData.password })
-      }
-
-      const { data, error } = await apiClient.put(`/users/${editingUser.id}`, updateData)
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      toast({
-        title: 'Success',
-        description: 'User updated successfully.',
-      })
-      setEditingUser(null)
-      resetForm()
-      fetchUsers()
-    } catch (error) {
-      console.error('Error updating user:', error)
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update user. Please try again.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
-      return
-    }
-
-    try {
-      const { data, error } = await apiClient.delete(`/users/${userId}`)
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      toast({
-        title: 'Success',
-        description: 'User deleted successfully.',
-      })
-      fetchUsers()
-    } catch (error) {
-      console.error('Error deleting user:', error)
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete user. Please try again.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const openEditDialog = (user: User) => {
-    setEditingUser(user)
-    setFormData({
-      name: user.name,
-      email: user.email,
-      roles: [...user.roles],
-      password: ''
-    })
-  }
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      roles: [],
-      password: ''
-    })
-  }
-
-  const closeDialogs = () => {
-    setIsCreateDialogOpen(false)
-    setEditingUser(null)
-    resetForm()
   }
 
   const toggleRole = (role: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       roles: prev.roles.includes(role)
-        ? prev.roles.filter(r => r !== role)
-        : [...prev.roles, role]
+        ? prev.roles.filter((r) => r !== role)
+        : [...prev.roles, role],
     }))
   }
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'destructive' as const
-      case 'leader':
-        return 'default' as const
-      case 'musician':
-        return 'secondary' as const
-      default:
-        return 'outline' as const
-    }
-  }
-
-  // Show loading state while checking authorization
-  if (isLoading) {
+  if (!session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Users className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <Users className="h-12 w-12 animate-pulse opacity-50" />
       </div>
     )
   }
 
-  // Don't render anything if not admin (after all hooks)
   if (session && !isAdmin) {
     return null
   }
@@ -293,29 +277,16 @@ export default function UsersPage() {
         description="Manage users and their permissions"
       />
 
-      {/* Filters and Actions */}
+      {/* Search and Add */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <div className="flex gap-4">
-          <div className="relative">
-            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 w-64"
-            />
-          </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="leader">Leader</SelectItem>
-              <SelectItem value="musician">Musician</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="relative">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 w-64"
+          />
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -338,9 +309,8 @@ export default function UsersPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="Enter full name"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -349,9 +319,8 @@ export default function UsersPage() {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                     placeholder="Enter email address"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -360,9 +329,8 @@ export default function UsersPage() {
                     id="password"
                     type="password"
                     value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                     placeholder="Enter password"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -383,7 +351,7 @@ export default function UsersPage() {
                 </div>
               </div>
               <DialogFooter className="mt-6">
-                <Button type="button" variant="outline" onClick={closeDialogs}>
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button type="submit">Create User</Button>
@@ -393,15 +361,15 @@ export default function UsersPage() {
         </Dialog>
       </div>
 
-      {/* Users Table */}
+      {/* User Sections */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Users ({filteredUsers.length})
+            Users ({users.filter((u) => u.isActive).length} active)
           </CardTitle>
           <CardDescription>
-            Manage user accounts and permissions
+            Click role badges to change user roles
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -410,135 +378,92 @@ export default function UsersPage() {
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
               <p>Loading users...</p>
             </div>
-          ) : filteredUsers.length === 0 ? (
+          ) : users.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No users found</p>
-              <p className="text-sm">
-                {searchTerm || roleFilter !== 'all' ? 'Try adjusting your filters' : 'Create your first user to get started'}
-              </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredUsers.map((user) => (
-                <Card key={user.id} className="border-l-4 border-l-primary">
-                  <CardContent className="pt-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-medium text-lg">{user.name}</span>
-                          <div className="flex gap-1">
-                            {user.roles.map((role) => (
-                              <Badge key={role} variant={getRoleBadgeVariant(role)} className="text-xs">
-                                {role}
-                              </Badge>
-                            ))}
-                          </div>
-                          {!user.isActive && (
-                            <Badge variant="outline" className="text-xs">
-                              Inactive
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                          <span>{user.email}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Created: {new Date(user.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEditDialog(user)}>
-                          <Edit className="mr-1 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteUser(user.id, user.name)}
-                        >
-                          <Trash2 className="mr-1 h-4 w-4" />
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              <UserSection
+                title="Admins"
+                users={admins}
+                currentUserId={currentUserId || ''}
+                onRolesChange={handleRolesChange}
+                onActivate={handleActivate}
+                onDeactivate={handleDeactivate}
+                onDelete={handleDelete}
+              />
+              <UserSection
+                title="Leaders"
+                users={leaders}
+                currentUserId={currentUserId || ''}
+                onRolesChange={handleRolesChange}
+                onActivate={handleActivate}
+                onDeactivate={handleDeactivate}
+                onDelete={handleDelete}
+              />
+              <UserSection
+                title="Musicians"
+                users={musicians}
+                currentUserId={currentUserId || ''}
+                onRolesChange={handleRolesChange}
+                onActivate={handleActivate}
+                onDeactivate={handleDeactivate}
+                onDelete={handleDelete}
+              />
+              <UserSection
+                title="Inactive"
+                users={inactive}
+                currentUserId={currentUserId || ''}
+                defaultExpanded={false}
+                isInactiveSection={true}
+                onRolesChange={handleRolesChange}
+                onActivate={handleActivate}
+                onDeactivate={handleDeactivate}
+                onDelete={handleDelete}
+              />
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Edit User Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={(open) => !open && closeDialogs()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Update user information and roles.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditUser}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Name *</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter full name"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email *</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Enter email address"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-password">New Password (optional)</Label>
-                <Input
-                  id="edit-password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Leave blank to keep current password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Roles *</Label>
-                <div className="flex gap-2">
-                  {['admin', 'leader', 'musician'].map((role) => (
-                    <Button
-                      key={role}
-                      type="button"
-                      variant={formData.roles.includes(role) ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => toggleRole(role)}
-                    >
-                      {role}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={closeDialogs}>
-                Cancel
-              </Button>
-              <Button type="submit">Update User</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Deactivate Confirmation Dialog */}
+      <AlertDialog open={!!deactivateUser} onOpenChange={() => setDeactivateUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate {deactivateUser?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              They won't be able to log in. Their history will be preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeactivate}>Deactivate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteUser} onOpenChange={() => setDeleteUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently delete {deleteUser?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All user data will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
