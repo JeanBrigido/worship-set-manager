@@ -368,6 +368,16 @@ export const updateUserRoles = async (req: Request & { user?: JwtPayload }, res:
     const { id } = req.params;
     const { roles } = req.body;
 
+    // Defensive check - should be caught by middleware but verify
+    if (!req.user?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Defensive check - validate roles array
+    if (!Array.isArray(roles) || roles.length === 0) {
+      return res.status(400).json({ error: 'At least one role is required' });
+    }
+
     // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
@@ -375,7 +385,7 @@ export const updateUserRoles = async (req: Request & { user?: JwtPayload }, res:
     }
 
     // Prevent removing your own admin role
-    if (req.user?.userId === id && existingUser.roles.includes(Role.admin) && !roles.includes(Role.admin)) {
+    if (req.user.userId === id && existingUser.roles.includes('admin') && !roles.includes('admin')) {
       return res.status(400).json({ error: 'You cannot remove your own admin role' });
     }
 
@@ -394,8 +404,8 @@ export const updateUserRoles = async (req: Request & { user?: JwtPayload }, res:
     });
 
     res.json({ data: user });
-  } catch (err) {
-    console.error('Error updating user roles:', err);
+  } catch (error) {
+    console.error('Error updating user roles:', error);
     res.status(500).json({ error: 'Failed to update user roles' });
   }
 };
