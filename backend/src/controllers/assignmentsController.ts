@@ -99,17 +99,41 @@ export const createAssignment = async (req: Request & { user?: JwtPayload }, res
       });
     }
 
-    // Check for unique constraint (setId + instrumentId)
-    const existingAssignment = await prisma.assignment.findFirst({
+    // Get the instrument to check maxPerSet
+    const instrument = await prisma.instrument.findUnique({
+      where: { id: instrumentId }
+    });
+
+    if (!instrument) {
+      return res.status(404).json({ error: "Instrument not found" });
+    }
+
+    // Count existing assignments for this instrument in this set
+    const existingCount = await prisma.assignment.count({
       where: {
         setId,
         instrumentId,
       },
     });
 
+    if (existingCount >= instrument.maxPerSet) {
+      return res.status(400).json({
+        error: `Maximum ${instrument.maxPerSet} ${instrument.displayName}(s) allowed per worship set`
+      });
+    }
+
+    // Check for duplicate assignment (same user, same instrument, same set)
+    const existingAssignment = await prisma.assignment.findFirst({
+      where: {
+        setId,
+        instrumentId,
+        userId,
+      },
+    });
+
     if (existingAssignment) {
       return res.status(400).json({
-        error: "This instrument is already assigned for this worship set"
+        error: "This user is already assigned to this instrument for this worship set"
       });
     }
 
