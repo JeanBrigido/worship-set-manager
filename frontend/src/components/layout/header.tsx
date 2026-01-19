@@ -401,7 +401,7 @@ export function Header() {
                   <Link href="/auth/signin">Sign In</Link>
                 </Button>
                 <Button asChild size="sm">
-                  <Link href="/auth/signin">Sign In</Link>
+                  <Link href="/auth/signup">Sign Up</Link>
                 </Button>
               </div>
             )}
