@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/layout/page-header'
@@ -52,7 +52,7 @@ export default function UsersPage() {
     }
   }, [session, isAdmin, router])
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await apiClient.get('/users')
@@ -69,13 +69,13 @@ export default function UsersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   useEffect(() => {
     if (isAdmin) {
       fetchUsers()
     }
-  }, [isAdmin])
+  }, [isAdmin, fetchUsers])
 
   // Filter and group users
   const { admins, leaders, musicians, inactive } = useMemo(() => {
@@ -106,6 +106,9 @@ export default function UsersPage() {
   }, [users, searchTerm])
 
   const handleRolesChange = async (userId: string, roles: string[]) => {
+    const user = users.find((u) => u.id === userId)
+    const userName = user?.name || 'User'
+
     const { error } = await apiClient.request(`/users/${userId}/roles`, {
       method: 'PATCH',
       body: JSON.stringify({ roles }),
@@ -119,14 +122,16 @@ export default function UsersPage() {
       prev.map((u) => (u.id === userId ? { ...u, roles } : u))
     )
 
-    const user = users.find((u) => u.id === userId)
     toast({
       title: 'Roles updated',
-      description: `Updated roles for ${user?.name}`,
+      description: `Updated roles for ${userName}`,
     })
   }
 
   const handleActivate = async (userId: string) => {
+    const user = users.find((u) => u.id === userId)
+    const userName = user?.name || 'User'
+
     const { error } = await apiClient.request(`/users/${userId}/active`, {
       method: 'PATCH',
       body: JSON.stringify({ isActive: true }),
@@ -145,10 +150,9 @@ export default function UsersPage() {
       prev.map((u) => (u.id === userId ? { ...u, isActive: true } : u))
     )
 
-    const user = users.find((u) => u.id === userId)
     toast({
       title: 'User activated',
-      description: `Activated ${user?.name}`,
+      description: `Activated ${userName}`,
     })
   }
 
@@ -186,7 +190,7 @@ export default function UsersPage() {
     setDeactivateUser(null)
   }
 
-  const handleDelete = async (userId: string, userName: string) => {
+  const handleDelete = async (userId: string) => {
     const user = users.find((u) => u.id === userId)
     setDeleteUser(user || null)
   }
