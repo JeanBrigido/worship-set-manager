@@ -105,6 +105,8 @@ export default function ServiceDetailPage() {
   const [loadingSongs, setLoadingSongs] = useState(false)
   const [addingSongs, setAddingSongs] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [songToRemove, setSongToRemove] = useState<{ id: string; title: string } | null>(null)
+  const [removingSong, setRemovingSong] = useState(false)
   const { toast } = useToast()
   const approveSuggestion = useApproveSuggestion()
   const rejectSuggestion = useRejectSuggestion()
@@ -312,6 +314,34 @@ export default function ServiceDetailPage() {
         description: error instanceof Error ? error.message : 'Failed to reject suggestion',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleRemoveSongFromSet = async () => {
+    if (!songToRemove) return
+
+    try {
+      setRemovingSong(true)
+      const { error } = await apiClient.delete(`/set-songs/${songToRemove.id}`)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      toast({
+        title: 'Success',
+        description: `"${songToRemove.title}" removed from worship set`,
+      })
+      setSongToRemove(null)
+      fetchService() // Refresh the service data
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to remove song',
+        variant: 'destructive',
+      })
+    } finally {
+      setRemovingSong(false)
     }
   }
 
@@ -535,6 +565,16 @@ export default function ServiceDetailPage() {
                           {setSong.songVersion.defaultKey && ` • Key: ${setSong.songVersion.defaultKey}`}
                         </div>
                       </div>
+                      {canManageWorshipSet && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSongToRemove({ id: setSong.id, title: setSong.songVersion.song.title })}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   ))}
               </div>
@@ -728,6 +768,28 @@ export default function ServiceDetailPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete Service
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove Song Confirmation Dialog */}
+      <AlertDialog open={!!songToRemove} onOpenChange={(open) => !open && setSongToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Song</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove "{songToRemove?.title}" from the worship set?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removingSong}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveSongFromSet}
+              disabled={removingSong}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removingSong ? 'Removing...' : 'Remove Song'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
