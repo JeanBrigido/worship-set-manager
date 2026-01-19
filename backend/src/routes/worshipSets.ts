@@ -36,6 +36,9 @@ router.put(
   worshipSetsController.updateWorshipSet
 );
 
+// Publish worship set (Admin or Leader only)
+router.post("/:id/publish", authMiddleware, requireRole([Role.admin, Role.leader]), worshipSetsController.publishWorshipSet);
+
 // Delete worship set (Admin only)
 router.delete("/:id", authMiddleware, requireRole([Role.admin]), worshipSetsController.deleteWorshipSet);
 
