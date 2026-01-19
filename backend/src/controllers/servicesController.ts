@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
-import { Role } from "@prisma/client";
+import { Role, ServiceStatus } from "@prisma/client";
 
 interface JwtPayload {
   userId: string;
@@ -150,17 +150,38 @@ export const updateService = async (req: Request & { user?: JwtPayload }, res: R
 
     const { id } = req.params;
     // Accept both camelCase and snake_case
-    const { date, serviceTypeId, service_type_id, notes } = req.body;
+    const { date, serviceTypeId, service_type_id, status, leaderId, leader_id } = req.body;
     const typeId = serviceTypeId || service_type_id;
+    const leaderUserId = leaderId || leader_id;
+
+    // Build update data object, only including fields that are provided
+    const updateData: {
+      serviceDate?: Date;
+      serviceTypeId?: string;
+      status?: ServiceStatus;
+      leaderId?: string | null;
+    } = {};
+
+    if (date) {
+      updateData.serviceDate = new Date(date);
+    }
+    if (typeId) {
+      updateData.serviceTypeId = typeId;
+    }
+    if (status && Object.values(ServiceStatus).includes(status)) {
+      updateData.status = status;
+    }
+    // Allow setting leaderId to null to unassign leader
+    if (leaderUserId !== undefined) {
+      updateData.leaderId = leaderUserId || null;
+    }
 
     const updated = await prisma.service.update({
       where: { id },
-      data: {
-        serviceDate: date ? new Date(date) : undefined,
-        serviceTypeId: typeId,
-      },
+      data: updateData,
       include: {
         serviceType: true,
+        leader: true,
         worshipSet: true,
       },
     });
