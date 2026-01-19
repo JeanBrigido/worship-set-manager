@@ -109,15 +109,45 @@ export const getMe = async (req: Request & { user?: JwtPayload }, res: Response)
 
 /**
  * GET /users
- * Admin only
+ * Admin only (or leader for limited data)
+ * Query params:
+ * - role: Filter by single role (e.g., "musician")
+ * - roles: Filter by multiple roles (comma-separated, e.g., "musician,leader")
+ * - isActive: Filter by active status (default: all)
  */
 export const listUsers = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
-    if (!req.user?.roles.includes(Role.admin)) {
+    // Allow admins and leaders to list users (leaders need this for assignments)
+    if (!req.user?.roles.includes(Role.admin) && !req.user?.roles.includes(Role.leader)) {
       return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
-    const users = await prisma.user.findMany();
+    // Build where clause for filtering
+    const where: any = {};
+
+    // Filter by role(s)
+    const roleParam = req.query.role as string;
+    const rolesParam = req.query.roles as string;
+
+    if (roleParam) {
+      // Single role filter
+      where.roles = { has: roleParam as Role };
+    } else if (rolesParam) {
+      // Multiple roles filter (OR condition)
+      const roleList = rolesParam.split(',').map(r => r.trim()) as Role[];
+      where.roles = { hasSome: roleList };
+    }
+
+    // Filter by active status
+    const isActiveParam = req.query.isActive;
+    if (isActiveParam !== undefined) {
+      where.isActive = isActiveParam === 'true';
+    }
+
+    const users = await prisma.user.findMany({
+      where,
+      orderBy: { name: 'asc' },
+    });
 
     res.json({
       data: users.map(u => ({

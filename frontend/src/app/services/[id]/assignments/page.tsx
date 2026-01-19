@@ -195,7 +195,8 @@ export default function ServiceAssignmentsPage() {
       const [serviceResult, instrumentsResult, usersResult] = await Promise.all([
         apiClient.get(`/services/${serviceId}`),
         apiClient.get('/instruments'),
-        apiClient.get('/users')
+        // Use server-side filtering for musicians and leaders
+        apiClient.get('/users?roles=musician,leader&isActive=true')
       ])
 
       if (serviceResult.error) {
@@ -217,10 +218,7 @@ export default function ServiceAssignmentsPage() {
         throw new Error(usersResult.error.message)
       }
       if (usersResult.data) {
-        // Filter to musicians and leaders who can be assigned
-        setUsers(usersResult.data.filter((user: User) =>
-          user.roles.includes('musician') || user.roles.includes('leader')
-        ))
+        setUsers(usersResult.data)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
