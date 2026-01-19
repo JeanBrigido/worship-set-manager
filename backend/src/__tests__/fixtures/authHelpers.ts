@@ -75,3 +75,11 @@ export function expiredToken(): { Authorization: string } {
 export function invalidToken(): { Authorization: string } {
   return { Authorization: 'Bearer invalid.token.here' };
 }
+
+/**
+ * Generate a token for a specific user ID with given roles
+ * Useful for testing ownership-based permissions
+ */
+export function tokenForUser(userId: string, roles: Role[]): { Authorization: string } {
+  return authHeader({ userId, roles });
+}
