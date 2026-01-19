@@ -54,6 +54,23 @@ export const createSetSong = async (req: Request & { user?: JwtPayload }, res: R
 
     const { setId, songVersionId, position, keyOverride, youtubeUrlOverride, isNew, notes } = req.body;
 
+    // Auto-determine isNew based on song's familiarity score if not explicitly provided
+    let shouldBeNew = isNew;
+    if (shouldBeNew === undefined || shouldBeNew === null) {
+      // Fetch the song to check its familiarity score
+      const songVersion = await prisma.songVersion.findUnique({
+        where: { id: songVersionId },
+        include: { song: true }
+      });
+
+      if (songVersion?.song) {
+        // Songs with familiarityScore < 50 are considered "new" to the congregation
+        shouldBeNew = songVersion.song.familiarityScore < 50;
+      } else {
+        shouldBeNew = false;
+      }
+    }
+
     const song = await prisma.setSong.create({
       data: {
         setId,
@@ -61,7 +78,7 @@ export const createSetSong = async (req: Request & { user?: JwtPayload }, res: R
         position,
         keyOverride,
         youtubeUrlOverride,
-        isNew: isNew ?? false,
+        isNew: shouldBeNew,
         notes,
       },
     });
