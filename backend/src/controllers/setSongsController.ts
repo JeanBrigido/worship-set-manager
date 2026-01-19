@@ -125,7 +125,32 @@ export const deleteSetSong = async (req: Request & { user?: JwtPayload }, res: R
 
     const { id } = req.params;
 
-    await prisma.setSong.delete({ where: { id } });
+    // Get the setSong to know its setId and position before deleting
+    const setSong = await prisma.setSong.findUnique({
+      where: { id },
+      select: { setId: true, position: true }
+    });
+
+    if (!setSong) {
+      return res.status(404).json({ error: "Set song not found" });
+    }
+
+    // Use a transaction to delete and reorder in one atomic operation
+    await prisma.$transaction(async (tx) => {
+      // Delete the setSong
+      await tx.setSong.delete({ where: { id } });
+
+      // Reorder remaining songs: decrement positions greater than deleted position
+      await tx.setSong.updateMany({
+        where: {
+          setId: setSong.setId,
+          position: { gt: setSong.position }
+        },
+        data: {
+          position: { decrement: 1 }
+        }
+      });
+    });
 
     res.status(204).send();
   } catch (err) {
