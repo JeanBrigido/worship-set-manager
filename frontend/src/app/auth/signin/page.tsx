@@ -1,140 +1,155 @@
 'use client'
 
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { signIn, getSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Loader2 } from 'lucide-react'
 
-export default function SignIn() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+import { AuthLayout, PasswordInput } from '@/components/auth'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { signInSchema, type SignInFormData } from '@/lib/auth-schemas'
+
+export default function SignInPage() {
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const expired = searchParams.get('expired') === 'true'
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  const form = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    mode: 'onBlur',
+  })
+
+  const onSubmit = async (data: SignInFormData) => {
     setError('')
 
     try {
       const result = await signIn('credentials', {
-        email,
-        password,
+        email: data.email,
+        password: data.password,
         redirect: false,
       })
 
       if (result?.error) {
         setError('Invalid email or password')
-      } else {
-        // Check session and redirect
-        const session = await getSession()
-        if (session) {
-          router.push('/')
-        }
+        return
       }
-    } catch (err) {
-      setError('An error occurred during sign in')
-    } finally {
-      setLoading(false)
+
+      const session = await getSession()
+      if (session) {
+        router.push(callbackUrl)
+      }
+    } catch {
+      setError('Unable to connect. Please try again.')
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <Link href="/" className="inline-block mb-4">
-              <h1 className="text-2xl font-bold text-gray-900">
-                🎵 Worship Set Manager
-              </h1>
-            </Link>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Welcome back
-            </h2>
-            <p className="text-gray-600">
-              Sign in to your account to continue
-            </p>
-          </div>
+    <AuthLayout title="Welcome back" description="Sign in to your account to continue">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {expired && (
+            <Alert>
+              <AlertDescription>
+                Your session has expired. Please sign in again.
+              </AlertDescription>
+            </Alert>
+          )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                <div className="flex">
-                  <span className="text-red-500 mr-2">⚠️</span>
-                  {error}
-                </div>
-              </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email address</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    autoComplete="email"
+                    disabled={form.formState.isSubmitting}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
+          />
 
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                  Signing in...
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Password</FormLabel>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
-              ) : (
-                'Sign in'
-              )}
-            </button>
-          </form>
+                <FormControl>
+                  <PasswordInput
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    disabled={form.formState.isSubmitting}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          {/* Footer */}
-          <div className="mt-6 text-center">
-            <Link
-              href="/"
-              className="text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
-            >
-              ← Back to home
-            </Link>
-          </div>
-        </div>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              'Sign in'
+            )}
+          </Button>
+        </form>
+      </Form>
+
+      <div className="mt-6 text-center text-sm">
+        <span className="text-muted-foreground">Don't have an account? </span>
+        <Link href="/auth/signup" className="text-primary hover:underline">
+          Sign up
+        </Link>
       </div>
-    </div>
+    </AuthLayout>
   )
 }
