@@ -32,20 +32,23 @@
 - Update: `backend/src/middleware/validateRequest.ts`
 **Problem:** Routes reference `createInstrumentSchema` and `updateInstrumentSchema` but they don't exist. Will cause runtime error.
 **Fix:** Create schemas for code (string, required), displayName (string, required), maxPerSet (number, min 1).
+**Status:** ✅ Fixed
 
 ### 3. Invalid default assignment status
 **Feature:** Assignments
 **File:** `backend/src/controllers/assignmentsController.ts:121`
 **Problem:** Default status `'PENDING'` doesn't match enum (should be `'invited'`).
 **Fix:** Change `'PENDING'` to `'invited'`.
+**Status:** ✅ Fixed
 
 ### 4. Worship set route parameter mismatch
 **Feature:** Worship Sets
 **Files:**
 - `backend/src/routes/worshipSets.ts`
-- `frontend/src/app/api/worship-sets/[id]/route.ts`
-**Problem:** Backend GET expects `serviceId`, frontend sends `worshipSetId`. Fetch will fail.
-**Fix:** Add separate route for fetching by worship set ID, or clarify the API contract.
+- `frontend/src/app/api/worship-sets/route.ts`
+**Problem:** Backend GET expects `serviceId`, frontend called wrong path. No list endpoint existed.
+**Fix:** Added list endpoint, fixed frontend API route path.
+**Status:** ✅ Fixed
 
 ---
 
