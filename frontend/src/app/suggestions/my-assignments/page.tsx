@@ -13,10 +13,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
-import { useMyAssignments, useCreateSuggestion } from '@/hooks/use-suggestions'
+import { useMyAssignments, useCreateSuggestion, useDeleteSuggestion } from '@/hooks/use-suggestions'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import { ListChecks, Calendar, Clock, Music, Plus, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { ListChecks, Calendar, Clock, Music, Plus, CheckCircle2, XCircle, AlertCircle, Trash2 } from 'lucide-react'
 
 interface Song {
   id: string
@@ -35,6 +35,7 @@ export default function MyAssignmentsPage() {
   const { toast } = useToast()
   const { data: assignments = [], isLoading } = useMyAssignments()
   const createSuggestion = useCreateSuggestion()
+  const deleteSuggestion = useDeleteSuggestion()
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [selectedSlotId, setSelectedSlotId] = useState<string>('')
@@ -62,6 +63,26 @@ export default function MyAssignmentsPage() {
     setSelectedSongId('')
     setNotes('')
     setIsAddDialogOpen(true)
+  }
+
+  const handleDeleteSuggestion = async (suggestionId: string, songTitle: string) => {
+    if (!confirm(`Are you sure you want to remove "${songTitle}" from your suggestions?`)) {
+      return
+    }
+
+    try {
+      await deleteSuggestion.mutateAsync(suggestionId)
+      toast({
+        title: 'Success',
+        description: 'Suggestion removed successfully',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to remove suggestion',
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleSubmitSuggestion = async () => {
@@ -243,6 +264,17 @@ export default function MyAssignmentsPage() {
                                 </div>
                               )}
                             </div>
+                            {!isOverdue && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteSuggestion(suggestion.id, suggestion.song.title)}
+                                disabled={deleteSuggestion.isPending}
+                                className="text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>
