@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -20,7 +20,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/auth-schemas'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [tokenValid, setTokenValid] = useState<boolean | null>(null)
@@ -188,5 +188,23 @@ export default function ResetPasswordPage() {
         </form>
       </Form>
     </AuthLayout>
+  )
+}
+
+function ResetPasswordLoading() {
+  return (
+    <AuthLayout title="Reset password" description="Loading...">
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    </AuthLayout>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<ResetPasswordLoading />}>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }

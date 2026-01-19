@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { signIn, getSession } from 'next-auth/react'
@@ -22,7 +22,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { signInSchema, type SignInFormData } from '@/lib/auth-schemas'
 
-export default function SignInPage() {
+function SignInForm() {
   const [error, setError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -151,5 +151,23 @@ export default function SignInPage() {
         </Link>
       </div>
     </AuthLayout>
+  )
+}
+
+function SignInLoading() {
+  return (
+    <AuthLayout title="Welcome back" description="Sign in to your account to continue">
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    </AuthLayout>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<SignInLoading />}>
+      <SignInForm />
+    </Suspense>
   )
 }

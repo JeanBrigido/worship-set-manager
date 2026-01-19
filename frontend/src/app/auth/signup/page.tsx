@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { signIn } from 'next-auth/react'
@@ -22,7 +22,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { signUpSchema, type SignUpFormData } from '@/lib/auth-schemas'
 
-export default function SignUpPage() {
+function SignUpForm() {
   const [error, setError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -205,5 +205,23 @@ export default function SignUpPage() {
         </Link>
       </div>
     </AuthLayout>
+  )
+}
+
+function SignUpLoading() {
+  return (
+    <AuthLayout title="Create your account" description="Join your worship team">
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    </AuthLayout>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<SignUpLoading />}>
+      <SignUpForm />
+    </Suspense>
   )
 }
