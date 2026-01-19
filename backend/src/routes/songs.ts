@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as songsController from "../controllers/songsController";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { requireRole } from "../middleware/requireRole";
+import { validateRequest } from "../middleware/validateRequest";
 import { validateUuid } from "../middleware/validateUuid";
 import { Role } from "@prisma/client";
 
@@ -23,6 +24,7 @@ router.post(
   "/",
   authMiddleware,
   requireRole([Role.admin, Role.leader, Role.musician]),
+  validateRequest("createSongSchema"),
   songsController.createSong
 );
 
@@ -32,6 +34,7 @@ router.put(
   authMiddleware,
   validateUuid('id'),
   requireRole([Role.admin, Role.leader, Role.musician]),
+  validateRequest("updateSongSchema"),
   songsController.updateSong
 );
 
