@@ -104,4 +104,13 @@ router.delete(
   usersController.deleteUser
 );
 
+// Admin only: toggle user active status
+router.patch(
+  "/:id/active",
+  authMiddleware,
+  validateUuid('id'),
+  requireRole([Role.admin]),
+  usersController.toggleUserActive
+);
+
 export default router;

@@ -317,3 +317,42 @@ export const deleteUser = async (req: Request & { user?: JwtPayload }, res: Resp
     res.status(500).json({ error: "Could not delete user" });
   }
 };
+
+/**
+ * PATCH /users/:id/active
+ * Toggle user active status (Admin only)
+ */
+export const toggleUserActive = async (req: Request & { user?: JwtPayload }, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ error: 'isActive must be a boolean' });
+    }
+
+    // Prevent deactivating yourself
+    if (req.user?.userId === id && !isActive) {
+      return res.status(400).json({ error: 'You cannot deactivate yourself' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { isActive },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({ data: user });
+  } catch (err) {
+    console.error('Error toggling user active status:', err);
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+};
