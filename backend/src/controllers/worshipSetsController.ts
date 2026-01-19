@@ -81,6 +81,7 @@ export const getWorshipSet = async (req: Request & { user?: JwtPayload }, res: R
 
 /**
  * POST /worshipSets
+ * Creates a worship set and automatically populates assignments from DefaultAssignments
  */
 export const createWorshipSet = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
@@ -90,15 +91,62 @@ export const createWorshipSet = async (req: Request & { user?: JwtPayload }, res
 
     const { serviceId, suggestDueAt, notes } = req.body;
 
-    const set = await prisma.worshipSet.create({
-      data: {
-        serviceId,
-        suggestDueAt: suggestDueAt ? new Date(suggestDueAt) : undefined,
-        notes,
+    // Get the service to find its serviceTypeId
+    const service = await prisma.service.findUnique({
+      where: { id: serviceId },
+      select: { serviceTypeId: true },
+    });
+
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    // Create worship set and assignments in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the worship set
+      const set = await tx.worshipSet.create({
+        data: {
+          serviceId,
+          suggestDueAt: suggestDueAt ? new Date(suggestDueAt) : undefined,
+          notes,
+        },
+      });
+
+      // Get default assignments for this service type
+      const defaultAssignments = await tx.defaultAssignment.findMany({
+        where: { serviceTypeId: service.serviceTypeId },
+      });
+
+      // Create assignments from defaults
+      if (defaultAssignments.length > 0) {
+        await tx.assignment.createMany({
+          data: defaultAssignments.map((da) => ({
+            setId: set.id,
+            instrumentId: da.instrumentId,
+            userId: da.userId,
+            status: "invited" as const,
+            invitedAt: new Date(),
+          })),
+        });
+      }
+
+      return set;
+    });
+
+    // Fetch the created set with assignments
+    const setWithAssignments = await prisma.worshipSet.findUnique({
+      where: { id: result.id },
+      include: {
+        assignments: {
+          include: {
+            instrument: true,
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
       },
     });
 
-    res.status(201).json({ data: set });
+    res.status(201).json({ data: setWithAssignments });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Could not create worship set" });

@@ -53,6 +53,7 @@ const routes = [
   { path: "/api/leader-rotations", file: "./routes/leaderRotations", name: "Leader Rotations" },
   { path: "/api/suggestions", file: "./routes/suggestions", name: "Suggestions" },
   { path: "/api/suggestion-slots", file: "./routes/suggestionSlots", name: "Suggestion Slots" },
+  { path: "/api/default-assignments", file: "./routes/defaultAssignments", name: "Default Assignments" },
 ];
 
 routes.forEach(({ path, file, name }) => {
