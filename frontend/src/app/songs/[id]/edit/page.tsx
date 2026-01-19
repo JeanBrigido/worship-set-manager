@@ -8,6 +8,7 @@ import { LoadingCard } from '@/components/ui/loading-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
 
 interface SongVersion {
   id: string
@@ -32,12 +33,11 @@ interface Song {
 }
 
 async function fetchSong(id: string): Promise<Song> {
-  const response = await fetch(`/api/songs/${id}`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch song')
+  const { data, error } = await apiClient.get<Song>(`/songs/${id}`)
+  if (error || !data) {
+    throw new Error(error?.message || 'Failed to fetch song')
   }
-  const result = await response.json()
-  return result.data || result
+  return data
 }
 
 export default function EditSongPage({ params }: { params: { id: string } }) {

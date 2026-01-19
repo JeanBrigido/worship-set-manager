@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Edit, Trash2, ArrowLeft, Plus, Music } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { apiClient } from '@/lib/api-client'
 
 interface SongVersion {
   id: string
@@ -41,12 +42,11 @@ interface Song {
 }
 
 async function fetchSong(id: string): Promise<Song> {
-  const response = await fetch(`/api/songs/${id}`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch song')
+  const { data, error } = await apiClient.get<Song>(`/songs/${id}`)
+  if (error || !data) {
+    throw new Error(error?.message || 'Failed to fetch song')
   }
-  const result = await response.json()
-  return result.data || result
+  return data
 }
 
 export default function SongDetailPage({ params }: { params: { id: string } }) {
@@ -79,12 +79,10 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this song? This action cannot be undone.')) {
       try {
-        const response = await fetch(`/api/songs/${params.id}`, {
-          method: 'DELETE',
-        })
+        const { error } = await apiClient.delete(`/songs/${params.id}`)
 
-        if (!response.ok) {
-          throw new Error('Failed to delete song')
+        if (error) {
+          throw new Error(error.message || 'Failed to delete song')
         }
 
         toast({
@@ -96,7 +94,7 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
       } catch (error) {
         toast({
           title: 'Error',
-          description: 'Failed to delete song',
+          description: error instanceof Error ? error.message : 'Failed to delete song',
           variant: 'destructive',
         })
       }
@@ -149,19 +147,12 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
         notes: versionForm.notes.trim() || undefined,
       }
 
-      const url = editingVersion
-        ? `/api/song-versions/${editingVersion.id}`
-        : '/api/song-versions'
+      const { error } = editingVersion
+        ? await apiClient.put(`/song-versions/${editingVersion.id}`, payload)
+        : await apiClient.post('/song-versions', payload)
 
-      const response = await fetch(url, {
-        method: editingVersion ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to save version')
+      if (error) {
+        throw new Error(error.message || 'Failed to save version')
       }
 
       toast({
@@ -188,13 +179,10 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`/api/song-versions/${versionToDelete.id}`, {
-        method: 'DELETE',
-      })
+      const { error } = await apiClient.delete(`/song-versions/${versionToDelete.id}`)
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to delete version')
+      if (error) {
+        throw new Error(error.message || 'Failed to delete version')
       }
 
       toast({
