@@ -1,13 +1,31 @@
 import { getSession } from 'next-auth/react'
 
+// In-memory token cache
+let cachedToken: { token: string; expiresAt: number } | null = null
+
+/**
+ * Clear the cached token (call on sign out)
+ */
+export function clearTokenCache(): void {
+  cachedToken = null
+}
+
 /**
  * Generates a JWT token compatible with the backend authentication system
  * from the current NextAuth.js session.
+ * Caches the token to avoid repeated API calls.
  */
 export async function generateBackendJWT(): Promise<string | null> {
+  // Check if we have a valid cached token (with 5 min buffer)
+  const bufferMs = 5 * 60 * 1000
+  if (cachedToken && cachedToken.expiresAt > Date.now() + bufferMs) {
+    return cachedToken.token
+  }
+
   const session = await getSession()
 
   if (!session?.user) {
+    cachedToken = null
     return null
   }
 
@@ -22,13 +40,25 @@ export async function generateBackendJWT(): Promise<string | null> {
 
     if (!response.ok) {
       console.error('Failed to generate JWT:', response.statusText)
+      cachedToken = null
       return null
     }
 
     const data = await response.json()
-    return data.token || null
+    const token = data.token
+
+    if (token) {
+      // Cache token with 1 hour expiry (matching server-side expiry)
+      cachedToken = {
+        token,
+        expiresAt: Date.now() + 60 * 60 * 1000,
+      }
+    }
+
+    return token || null
   } catch (error) {
     console.error('Error generating JWT:', error)
+    cachedToken = null
     return null
   }
 }

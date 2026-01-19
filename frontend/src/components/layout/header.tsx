@@ -25,6 +25,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useMyAssignments } from "@/hooks/use-suggestions";
 import { Music, Calendar, Users, Settings, LogOut, User, ListChecks, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clearTokenCache } from "@/lib/jwt-bridge";
 
 export function Header() {
   const { data: session } = useSession();
@@ -254,7 +255,10 @@ export function Header() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onSelect={() => signOut()}
+                      onSelect={() => {
+                        clearTokenCache()
+                        signOut({ callbackUrl: '/' })
+                      }}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
                       Log out

@@ -1,4 +1,4 @@
-import { generateBackendJWT } from './jwt-bridge'
+import { generateBackendJWT, clearTokenCache } from './jwt-bridge'
 
 // Call backend API directly instead of proxying through Next.js
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -9,6 +9,17 @@ export interface ApiResponse<T = any> {
     message: string
     code?: string
     details?: any[]
+  }
+}
+
+/**
+ * Redirect to sign in with session expired message
+ */
+function redirectToSignIn(): void {
+  if (typeof window !== 'undefined') {
+    const currentPath = window.location.pathname + window.location.search
+    const signInUrl = `/auth/signin?callbackUrl=${encodeURIComponent(currentPath)}&expired=true`
+    window.location.href = signInUrl
   }
 }
 
@@ -51,6 +62,18 @@ export class ApiClient {
         ...options,
         headers,
       })
+
+      // Handle 401 Unauthorized - session expired
+      if (response.status === 401) {
+        clearTokenCache()
+        redirectToSignIn()
+        return {
+          error: {
+            message: 'Session expired. Please sign in again.',
+            code: 'SESSION_EXPIRED',
+          }
+        }
+      }
 
       const jsonResponse = await response.json()
 
