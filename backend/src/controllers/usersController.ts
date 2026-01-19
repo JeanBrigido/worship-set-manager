@@ -125,6 +125,9 @@ export const listUsers = async (req: Request & { user?: JwtPayload }, res: Respo
         name: u.name,
         email: u.email,
         roles: u.roles,
+        isActive: u.isActive,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
       }))
     });
   } catch (err) {
