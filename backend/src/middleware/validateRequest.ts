@@ -16,7 +16,9 @@ import {
   updateSetSongSchema,
   createSuggestionSlotSchema,
   updateSuggestionSlotSchema,
-} from "../validation"; // 👈 clean import
+  createInstrumentSchema,
+  updateInstrumentSchema,
+} from "../validation";
 
 const schemas: Record<string, any> = {
   signupSchema,
@@ -34,6 +36,8 @@ const schemas: Record<string, any> = {
   updateSetSongSchema,
   createSuggestionSlotSchema,
   updateSuggestionSlotSchema,
+  createInstrumentSchema,
+  updateInstrumentSchema,
 };
 
 export const validateRequest = (schemaName: keyof typeof schemas) => {

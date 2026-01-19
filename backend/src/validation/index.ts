@@ -11,3 +11,4 @@ export * from "./suggestionsSchemas";
 export * from "./assignmentsSchemas";
 export * from "./availabilitySchemas";
 export * from "./notificationsSchemas";
+export * from "./instrumentsSchemas";

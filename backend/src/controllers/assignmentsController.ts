@@ -118,7 +118,7 @@ export const createAssignment = async (req: Request & { user?: JwtPayload }, res
         setId,
         instrumentId,
         userId,
-        status: status as AssignmentStatus || 'PENDING',
+        status: (status as AssignmentStatus) || 'invited',
         invitedAt: new Date(),
       },
       include: {

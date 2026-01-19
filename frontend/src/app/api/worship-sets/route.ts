@@ -17,9 +17,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const serviceId = searchParams.get('serviceId')
 
-    // If serviceId is provided, get worship sets for that service
+    // If serviceId is provided, get worship set for that service
+    // Backend route is GET /worship-sets/:serviceId
     const url = serviceId
-      ? `${API_BASE}/worship-sets/service/${serviceId}`
+      ? `${API_BASE}/worship-sets/${serviceId}`
       : `${API_BASE}/worship-sets`
 
     const response = await fetch(url, {

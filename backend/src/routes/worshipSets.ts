@@ -12,7 +12,10 @@ const router = Router();
  * Base path: /worshipSets
  */
 
-// Get worship set for a service
+// List all worship sets
+router.get("/", authMiddleware, worshipSetsController.listWorshipSets);
+
+// Get worship set for a service (by serviceId)
 router.get("/:serviceId", authMiddleware, worshipSetsController.getWorshipSet);
 
 // Create a worship set for a service (Admin only)

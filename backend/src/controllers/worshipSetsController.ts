@@ -8,6 +8,38 @@ interface JwtPayload {
 }
 
 /**
+ * GET /worshipSets
+ * List all worship sets
+ */
+export const listWorshipSets = async (req: Request & { user?: JwtPayload }, res: Response) => {
+  try {
+    const sets = await prisma.worshipSet.findMany({
+      include: {
+        service: {
+          include: {
+            serviceType: true
+          }
+        },
+        leaderUser: true,
+        _count: {
+          select: { setSongs: true }
+        }
+      },
+      orderBy: {
+        service: {
+          serviceDate: 'desc'
+        }
+      }
+    });
+
+    res.json({ data: sets });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Could not fetch worship sets" });
+  }
+};
+
+/**
  * GET /worshipSets/:serviceId
  */
 export const getWorshipSet = async (req: Request & { user?: JwtPayload }, res: Response) => {
