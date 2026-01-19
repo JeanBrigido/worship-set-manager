@@ -438,7 +438,7 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Deactivate {deactivateUser?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              They won't be able to log in. Their history will be preserved.
+              They will not be able to log in. Their history will be preserved.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
