@@ -14,11 +14,17 @@ export interface ApiResponse<T = any> {
 
 /**
  * Redirect to sign in with session expired message
+ * Skip redirect if already on an auth page to prevent loops
  */
 function redirectToSignIn(): void {
   if (typeof window !== 'undefined') {
-    const currentPath = window.location.pathname + window.location.search
-    const signInUrl = `/auth/signin?callbackUrl=${encodeURIComponent(currentPath)}&expired=true`
+    const currentPath = window.location.pathname
+    // Don't redirect if already on an auth page
+    if (currentPath.startsWith('/auth/')) {
+      return
+    }
+    const fullPath = currentPath + window.location.search
+    const signInUrl = `/auth/signin?callbackUrl=${encodeURIComponent(fullPath)}&expired=true`
     window.location.href = signInUrl
   }
 }
