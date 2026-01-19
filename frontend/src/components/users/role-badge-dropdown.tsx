@@ -10,14 +10,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/hooks/use-toast'
 
+const ALL_ROLES = ['admin', 'leader', 'musician'] as const
+type Role = (typeof ALL_ROLES)[number]
+
 interface RoleBadgeDropdownProps {
   userId: string
-  currentRoles: string[]
+  currentRoles: Role[]
   isCurrentUser: boolean
-  onRolesChange: (userId: string, roles: string[]) => Promise<void>
+  onRolesChange: (userId: string, roles: Role[]) => Promise<void>
 }
-
-const ALL_ROLES = ['admin', 'leader', 'musician'] as const
 
 const getRoleBadgeVariant = (role: string) => {
   switch (role) {
@@ -38,7 +39,7 @@ export function RoleBadgeDropdown({
   isCurrentUser,
   onRolesChange,
 }: RoleBadgeDropdownProps) {
-  const [roles, setRoles] = useState<string[]>(currentRoles)
+  const [roles, setRoles] = useState<Role[]>(currentRoles)
   const [isUpdating, setIsUpdating] = useState(false)
   const { toast } = useToast()
 
@@ -74,6 +75,7 @@ export function RoleBadgeDropdown({
       await onRolesChange(userId, newRoles)
       setRoles(newRoles)
     } catch (error) {
+      console.error('Failed to update roles:', error)
       toast({
         title: 'Error',
         description: 'Failed to update roles.',
