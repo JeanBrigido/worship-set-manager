@@ -310,6 +310,9 @@ describe('Set Songs API', () => {
     });
 
     it('should reorder remaining songs after deletion', async () => {
+      // First delete the testSetSong created in beforeEach to start fresh
+      await prisma.setSong.delete({ where: { id: testSetSong.id } });
+
       // Create three songs
       const song1 = await prisma.setSong.create({
         data: {
@@ -332,9 +335,6 @@ describe('Set Songs API', () => {
           position: 3,
         },
       });
-
-      // Delete the first song that was created in beforeEach
-      await prisma.setSong.delete({ where: { id: testSetSong.id } });
 
       // Delete the middle song
       await request(app)

@@ -20,6 +20,8 @@ import {
   updateInstrumentSchema,
   createSongSchema,
   updateSongSchema,
+  createSongVersionSchema,
+  updateSongVersionSchema,
   createAssignmentSchema,
   updateAssignmentSchema,
 } from "../validation";
@@ -44,6 +46,8 @@ const schemas: Record<string, any> = {
   updateInstrumentSchema,
   createSongSchema,
   updateSongSchema,
+  createSongVersionSchema,
+  updateSongVersionSchema,
   createAssignmentSchema,
   updateAssignmentSchema,
 };

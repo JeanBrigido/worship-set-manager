@@ -96,7 +96,7 @@ describe('Authorization & Role-Based Access Control Tests', () => {
         .expect(403);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('Forbidden');
+      expect(response.body.error.message).toContain('Forbidden');
     });
 
     it('should reject musician from listing all users', async () => {
@@ -106,7 +106,7 @@ describe('Authorization & Role-Based Access Control Tests', () => {
         .expect(403);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('Forbidden');
+      expect(response.body.error.message).toContain('Forbidden');
     });
 
     it('should allow admin to create a new user', async () => {
@@ -141,7 +141,7 @@ describe('Authorization & Role-Based Access Control Tests', () => {
         .expect(403);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('Forbidden');
+      expect(response.body.error.message).toContain('Forbidden');
     });
 
     it('should allow admin to delete a user', async () => {
@@ -174,7 +174,7 @@ describe('Authorization & Role-Based Access Control Tests', () => {
         .expect(403);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('Forbidden');
+      expect(response.body.error.message).toContain('Forbidden');
     });
   });
 
@@ -264,7 +264,7 @@ describe('Authorization & Role-Based Access Control Tests', () => {
         .expect(403);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('Forbidden');
+      expect(response.body.error.message).toContain('Forbidden');
     });
 
     it('should allow admin to view any user profile', async () => {

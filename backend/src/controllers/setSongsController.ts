@@ -193,14 +193,23 @@ export const reorderSetSongs = async (req: Request & { user?: JwtPayload }, res:
     }
 
     // Update all positions in a transaction
-    await prisma.$transaction(
-      songIds.map((songId, index) =>
-        prisma.setSong.update({
-          where: { id: songId },
-          data: { position: index + 1 }
-        })
-      )
-    );
+    // First set to negative values to avoid unique constraint conflicts, then set final values
+    await prisma.$transaction(async (tx) => {
+      // Set all to temporary negative positions
+      for (let i = 0; i < songIds.length; i++) {
+        await tx.setSong.update({
+          where: { id: songIds[i] },
+          data: { position: -(i + 1) }
+        });
+      }
+      // Set final positive positions
+      for (let i = 0; i < songIds.length; i++) {
+        await tx.setSong.update({
+          where: { id: songIds[i] },
+          data: { position: i + 1 }
+        });
+      }
+    });
 
     // Return the reordered songs
     const reorderedSongs = await prisma.setSong.findMany({

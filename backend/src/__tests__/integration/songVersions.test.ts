@@ -43,7 +43,7 @@ describe('Song Versions API', () => {
     });
   });
 
-  describe('GET /song-versions', () => {
+  describe('GET /song-versions/song/:songId', () => {
     beforeEach(async () => {
       testVersion = await prisma.songVersion.create({
         data: {
@@ -55,30 +55,21 @@ describe('Song Versions API', () => {
       });
     });
 
-    it('should list all song versions', async () => {
+    it('should list versions for a song', async () => {
       const response = await request(app)
-        .get('/song-versions')
+        .get(`/song-versions/song/${testSong.id}`)
         .set(adminToken())
         .expect(200);
 
       expect(response.body.data).toBeDefined();
       expect(Array.isArray(response.body.data)).toBe(true);
-    });
-
-    it('should filter by songId', async () => {
-      const response = await request(app)
-        .get(`/song-versions?songId=${testSong.id}`)
-        .set(adminToken())
-        .expect(200);
-
-      expect(response.body.data).toBeDefined();
       expect(response.body.data.length).toBeGreaterThan(0);
       expect(response.body.data[0].songId).toBe(testSong.id);
     });
 
     it('should allow musicians to view versions', async () => {
       const response = await request(app)
-        .get('/song-versions')
+        .get(`/song-versions/song/${testSong.id}`)
         .set(musicianToken())
         .expect(200);
 
@@ -170,7 +161,7 @@ describe('Song Versions API', () => {
         .send({
           name: 'No Song ID',
         })
-        .expect(500); // Will fail due to missing foreign key
+        .expect(400); // Validation catches missing songId
     });
   });
 
@@ -207,11 +198,11 @@ describe('Song Versions API', () => {
         .put(`/song-versions/${testVersion.id}`)
         .set(leaderToken())
         .send({
-          notes: 'Updated notes',
+          name: 'Updated Version Name',
         })
         .expect(200);
 
-      expect(response.body.data.notes).toBe('Updated notes');
+      expect(response.body.data.name).toBe('Updated Version Name');
     });
 
     it('should reject update with musician role', async () => {
@@ -248,11 +239,11 @@ describe('Song Versions API', () => {
       expect(deleted).toBeNull();
     });
 
-    it('should delete version with leader token', async () => {
+    it('should reject deletion with leader role (admin only)', async () => {
       await request(app)
         .delete(`/song-versions/${testVersion.id}`)
         .set(leaderToken())
-        .expect(204);
+        .expect(403);
     });
 
     it('should reject deletion with musician role', async () => {

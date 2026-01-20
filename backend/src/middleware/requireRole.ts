@@ -13,13 +13,13 @@ interface JwtPayload {
 export const requireRole = (allowedRoles: Role[]) => {
   return (req: Request & { user?: JwtPayload }, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: { message: "Unauthorized" } });
     }
 
     const hasRole = req.user.roles.some((role) => allowedRoles.includes(role));
 
     if (!hasRole) {
-      return res.status(403).json({ error: "Forbidden: insufficient role" });
+      return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
     next();

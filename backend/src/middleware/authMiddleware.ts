@@ -17,7 +17,7 @@ export const authMiddleware = async (
   const token = authHeader?.split(" ")[1]; // Expect "Bearer <token>"
 
   if (!token) {
-    return res.status(401).json({ error: "Missing token" });
+    return res.status(401).json({ error: { message: "Missing token" } });
   }
 
   try {
@@ -30,17 +30,17 @@ export const authMiddleware = async (
     });
 
     if (!user) {
-      return res.status(401).json({ error: "User not found" });
+      return res.status(401).json({ error: { message: "User not found" } });
     }
 
     if (!user.isActive) {
-      return res.status(401).json({ error: "Account is deactivated" });
+      return res.status(401).json({ error: { message: "Account is deactivated" } });
     }
 
     req.user = payload;
     next();
   } catch (err) {
     console.error("JWT verification failed:", err);
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ error: { message: "Invalid token" } });
   }
 };

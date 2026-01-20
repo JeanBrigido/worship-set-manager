@@ -16,27 +16,35 @@ describe('Default Assignments API', () => {
   let testAssignment: any;
 
   beforeAll(async () => {
+    const testId = Date.now().toString();
+
     // Create test service type
-    testServiceType = await prisma.serviceType.create({
-      data: {
-        name: 'Test Service Type for DefaultAssignments',
+    testServiceType = await prisma.serviceType.upsert({
+      where: { name: `Test Service Type for DefaultAssignments ${testId}` },
+      update: {},
+      create: {
+        name: `Test Service Type for DefaultAssignments ${testId}`,
         defaultStartTime: '10:00',
       },
     });
 
     // Create test instrument
-    testInstrument = await prisma.instrument.create({
-      data: {
-        code: 'test-default-inst',
+    testInstrument = await prisma.instrument.upsert({
+      where: { code: `test-default-inst-${testId}` },
+      update: {},
+      create: {
+        code: `test-default-inst-${testId}`,
         displayName: 'Test Default Instrument',
         maxPerSet: 1,
       },
     });
 
     // Create test user
-    testUser = await prisma.user.create({
-      data: {
-        email: 'test-default-assignment@example.com',
+    testUser = await prisma.user.upsert({
+      where: { email: `test-default-assignment-${testId}@example.com` },
+      update: {},
+      create: {
+        email: `test-default-assignment-${testId}@example.com`,
         name: 'Test Default Assignment User',
         roles: ['musician'],
       },
@@ -236,11 +244,14 @@ describe('Default Assignments API', () => {
 
   describe('PUT /default-assignments/:id', () => {
     let secondUser: any;
+    const secondUserEmail = `test-default-assignment-2-${Date.now()}@example.com`;
 
     beforeAll(async () => {
-      secondUser = await prisma.user.create({
-        data: {
-          email: 'test-default-assignment-2@example.com',
+      secondUser = await prisma.user.upsert({
+        where: { email: secondUserEmail },
+        update: {},
+        create: {
+          email: secondUserEmail,
           name: 'Second Test User',
           roles: ['musician'],
         },
@@ -251,7 +262,7 @@ describe('Default Assignments API', () => {
       if (secondUser) {
         await prisma.user.delete({
           where: { id: secondUser.id },
-        });
+        }).catch(() => {}); // Ignore if already deleted
       }
     });
 
