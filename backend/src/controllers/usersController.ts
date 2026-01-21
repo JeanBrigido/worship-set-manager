@@ -477,6 +477,7 @@ export const updateUserRoles = async (req: Request & { user?: JwtPayload }, res:
 /**
  * GET /users/:id/song-progress
  * Get songs to practice for upcoming services (Self or Admin)
+ * Includes services where user is assigned OR is the worship set leader
  * Query params:
  *   - upcoming: "true" to filter to future services only (default: true)
  */
@@ -504,14 +505,14 @@ export const getSongProgress = async (req: Request & { user?: JwtPayload }, res:
     const cutoffDate = new Date(today);
     cutoffDate.setHours(-24, 0, 0, 0);
 
+    const serviceFilter = upcoming ? { serviceDate: { gte: cutoffDate } } : undefined;
+
     // Get user's assignments to find services they're assigned to
     const assignments = await prisma.assignment.findMany({
       where: {
         userId: id,
         worshipSet: {
-          service: upcoming ? {
-            serviceDate: { gte: cutoffDate }
-          } : undefined
+          service: serviceFilter
         }
       },
       include: {
@@ -543,15 +544,46 @@ export const getSongProgress = async (req: Request & { user?: JwtPayload }, res:
       }
     });
 
+    // Also get worship sets where user is the leader (even if not assigned)
+    const leaderWorshipSets = await prisma.worshipSet.findMany({
+      where: {
+        leaderUserId: id,
+        service: serviceFilter
+      },
+      include: {
+        service: {
+          include: {
+            serviceType: true
+          }
+        },
+        setSongs: {
+          orderBy: { position: 'asc' },
+          include: {
+            songVersion: {
+              include: {
+                song: true
+              }
+            },
+            singer: {
+              select: { id: true, name: true }
+            },
+            userProgress: {
+              where: { userId: id }
+            }
+          }
+        }
+      }
+    });
+
     // Group songs by service
     const serviceMap = new Map<string, {
       service: any;
       songs: any[];
     }>();
 
-    for (const assignment of assignments) {
-      const ws = assignment.worshipSet;
-      if (!ws?.service) continue;
+    // Helper function to add songs from a worship set
+    const addSongsFromWorshipSet = (ws: any) => {
+      if (!ws?.service) return;
 
       const serviceId = ws.service.id;
 
@@ -567,7 +599,7 @@ export const getSongProgress = async (req: Request & { user?: JwtPayload }, res:
       }
 
       // Add songs that haven't been added yet
-      const existingSongIds = new Set(serviceMap.get(serviceId)!.songs.map(s => s.setSong.id));
+      const existingSongIds = new Set(serviceMap.get(serviceId)!.songs.map((s: any) => s.setSong.id));
 
       for (const setSong of ws.setSongs) {
         if (existingSongIds.has(setSong.id)) continue;
@@ -604,6 +636,16 @@ export const getSongProgress = async (req: Request & { user?: JwtPayload }, res:
           listenedAt,
         });
       }
+    };
+
+    // Process assignments
+    for (const assignment of assignments) {
+      addSongsFromWorshipSet(assignment.worshipSet);
+    }
+
+    // Process leader worship sets
+    for (const ws of leaderWorshipSets) {
+      addSongsFromWorshipSet(ws);
     }
 
     // Convert to array and sort by service date
