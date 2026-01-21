@@ -101,7 +101,7 @@ model Song {
 }
 
 model SongVersion {
-  id         String    @id @default(uuid())
+  id         String      @id @default(uuid())
   songId     String
   name       String
   youtubeUrl String?
@@ -109,7 +109,22 @@ model SongVersion {
   bpm        Int?
   notes      String?
   setSongs   SetSong[]
-  song       Song      @relation(fields: [songId], references: [id], onDelete: Cascade)
+  song       Song        @relation(fields: [songId], references: [id], onDelete: Cascade)
+  chordSheet ChordSheet?
+}
+
+model ChordSheet {
+  id            String   @id @default(uuid())
+  songVersionId String   @unique
+  chordText     String?
+  originalKey   String?
+  fileUrl       String?
+  fileName      String?
+  externalUrl   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  songVersion   SongVersion @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
 }
 
 model SetSong {
