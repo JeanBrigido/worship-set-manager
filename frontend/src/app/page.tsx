@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react'
+import { SongsToPractice } from '@/components/dashboard/songs-to-practice'
 
 interface Assignment {
   id: string
@@ -349,6 +350,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Songs to Practice Section */}
+      <SongsToPractice />
 
       {/* Main Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

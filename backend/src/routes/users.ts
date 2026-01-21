@@ -92,6 +92,14 @@ router.get(
   singerSongKeysController.getUserKeyProfile
 );
 
+// Get user's song progress for upcoming services (Self/Admin) - must be before /:id
+router.get(
+  "/:id/song-progress",
+  authMiddleware,
+  validateUuid('id'),
+  usersController.getSongProgress
+);
+
 // Get user profile (Self/Admin - controller handles authorization logic)
 router.get("/:id", authMiddleware, validateUuid('id'), usersController.getUser);
 

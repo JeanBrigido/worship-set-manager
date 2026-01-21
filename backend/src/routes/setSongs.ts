@@ -14,6 +14,12 @@ const router = Router();
 // List songs for a worship set
 router.get("/set/:setId", authMiddleware, setSongsController.listSetSongs);
 
+// Mark song as listened (any authenticated user)
+router.post("/:id/listened", authMiddleware, setSongsController.markListened);
+
+// Unmark song as listened (any authenticated user)
+router.delete("/:id/listened", authMiddleware, setSongsController.unmarkListened);
+
 // Get a single set song
 router.get("/:id", authMiddleware, setSongsController.getSetSong);
 

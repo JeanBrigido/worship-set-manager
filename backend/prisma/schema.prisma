@@ -11,15 +11,15 @@ datasource db {
 /// ///////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////
 model User {
-  id                  String               @id @default(uuid())
-  email               String               @unique
+  id                  String                @id @default(uuid())
+  email               String                @unique
   password            String?
   name                String
   phoneE164           String?
   roles               Role[]
-  isActive            Boolean              @default(true)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  isActive            Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
   emailVerified       DateTime?
   image               String?
   accounts            Account[]
@@ -29,13 +29,14 @@ model User {
   leaderRotations     LeaderRotation[]
   notifications       NotificationLog[]
   passwordResetTokens PasswordResetToken[]
-  servicesLed         Service[]            @relation("LeaderServices")
+  servicesLed         Service[]             @relation("LeaderServices")
   sessions            Session[]
-  setSongsAsSinger    SetSong[]            @relation("SetSongSinger")
-  singerSongKeys      SingerSongKey[]      @relation("SingerKeys")
+  setSongsAsSinger    SetSong[]             @relation("SetSongSinger")
+  singerSongKeys      SingerSongKey[]       @relation("SingerKeys")
+  songProgress        UserSetSongProgress[]
   suggestionSlots     SuggestionSlot[]
   userInstruments     UserInstrument[]
-  worshipSetsLed      WorshipSet[]         @relation("WorshipSetLeader")
+  worshipSetsLed      WorshipSet[]          @relation("WorshipSetLeader")
 }
 
 /// ///////////////////////////////////////////////////
@@ -112,20 +113,37 @@ model SongVersion {
 }
 
 model SetSong {
-  id                 String      @id @default(uuid())
+  id                 String                @id @default(uuid())
   setId              String
   songVersionId      String
   position           Int
   keyOverride        String?
   youtubeUrlOverride String?
-  isNew              Boolean     @default(false)
+  isNew              Boolean               @default(false)
   notes              String?
   singerId           String?
-  worshipSet         WorshipSet  @relation(fields: [setId], references: [id], onDelete: Cascade)
-  singer             User?       @relation("SetSongSinger", fields: [singerId], references: [id])
-  songVersion        SongVersion @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
+  worshipSet         WorshipSet            @relation(fields: [setId], references: [id], onDelete: Cascade)
+  singer             User?                 @relation("SetSongSinger", fields: [singerId], references: [id])
+  songVersion        SongVersion           @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
+  userProgress       UserSetSongProgress[]
 
   @@unique([setId, position])
+}
+
+/// Tracks whether a user has listened to a song for practice
+model UserSetSongProgress {
+  id         String   @id @default(uuid())
+  userId     String
+  setSongId  String
+  listenedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  setSong SetSong @relation(fields: [setSongId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, setSongId])
+  @@index([userId])
+  @@index([setSongId])
 }
 
 /// Tracks which key a singer uses for a particular song (full history)

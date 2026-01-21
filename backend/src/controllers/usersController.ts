@@ -473,3 +473,146 @@ export const updateUserRoles = async (req: Request & { user?: JwtPayload }, res:
     res.status(500).json({ error: 'Failed to update user roles' });
   }
 };
+
+/**
+ * GET /users/:id/song-progress
+ * Get songs to practice for upcoming services (Self or Admin)
+ * Query params:
+ *   - upcoming: "true" to filter to future services only (default: true)
+ */
+export const getSongProgress = async (req: Request & { user?: JwtPayload }, res: Response) => {
+  try {
+    const { id } = req.params;
+    const currentUser = req.user;
+
+    if (!currentUser) {
+      return res.status(401).json({ error: { message: "Unauthorized" } });
+    }
+
+    // Allow self or admin access
+    if (currentUser.userId !== id && !currentUser.roles.includes(Role.admin)) {
+      return res.status(403).json({ error: { message: "Forbidden" } });
+    }
+
+    const upcoming = req.query.upcoming !== 'false';
+
+    // Build date filter for services
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Show services up to 24 hours after they've passed
+    const cutoffDate = new Date(today);
+    cutoffDate.setHours(-24, 0, 0, 0);
+
+    // Get user's assignments to find services they're assigned to
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        userId: id,
+        worshipSet: {
+          service: upcoming ? {
+            serviceDate: { gte: cutoffDate }
+          } : undefined
+        }
+      },
+      include: {
+        worshipSet: {
+          include: {
+            service: {
+              include: {
+                serviceType: true
+              }
+            },
+            setSongs: {
+              orderBy: { position: 'asc' },
+              include: {
+                songVersion: {
+                  include: {
+                    song: true
+                  }
+                },
+                singer: {
+                  select: { id: true, name: true }
+                },
+                userProgress: {
+                  where: { userId: id }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Group songs by service
+    const serviceMap = new Map<string, {
+      service: any;
+      songs: any[];
+    }>();
+
+    for (const assignment of assignments) {
+      const ws = assignment.worshipSet;
+      if (!ws?.service) continue;
+
+      const serviceId = ws.service.id;
+
+      if (!serviceMap.has(serviceId)) {
+        serviceMap.set(serviceId, {
+          service: {
+            id: ws.service.id,
+            serviceDate: ws.service.serviceDate,
+            serviceType: ws.service.serviceType,
+          },
+          songs: []
+        });
+      }
+
+      // Add songs that haven't been added yet
+      const existingSongIds = new Set(serviceMap.get(serviceId)!.songs.map(s => s.setSong.id));
+
+      for (const setSong of ws.setSongs) {
+        if (existingSongIds.has(setSong.id)) continue;
+
+        // Resolve YouTube URL (priority: override > version > song default)
+        const youtubeUrl = setSong.youtubeUrlOverride
+          || setSong.songVersion?.youtubeUrl
+          || setSong.songVersion?.song?.defaultYoutubeUrl
+          || null;
+
+        const listened = setSong.userProgress.length > 0;
+        const listenedAt = listened ? setSong.userProgress[0].listenedAt : null;
+
+        serviceMap.get(serviceId)!.songs.push({
+          setSong: {
+            id: setSong.id,
+            position: setSong.position,
+            keyOverride: setSong.keyOverride,
+          },
+          songVersion: {
+            id: setSong.songVersion.id,
+            name: setSong.songVersion.name,
+            youtubeUrl: setSong.songVersion.youtubeUrl,
+          },
+          song: {
+            id: setSong.songVersion.song.id,
+            title: setSong.songVersion.song.title,
+            artist: setSong.songVersion.song.artist,
+            defaultYoutubeUrl: setSong.songVersion.song.defaultYoutubeUrl,
+          },
+          singer: setSong.singer,
+          youtubeUrl,
+          listened,
+          listenedAt,
+        });
+      }
+    }
+
+    // Convert to array and sort by service date
+    const result = Array.from(serviceMap.values())
+      .sort((a, b) => new Date(a.service.serviceDate).getTime() - new Date(b.service.serviceDate).getTime());
+
+    res.json({ data: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: { message: "Could not fetch song progress" } });
+  }
+};

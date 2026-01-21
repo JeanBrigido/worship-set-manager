@@ -15,8 +15,9 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { useToast } from '@/hooks/use-toast'
 import { SuggestedSongs } from '@/components/worship-set/suggested-songs'
 import { EditSetSongModal } from '@/components/worship-set/edit-set-song-modal'
+import { ExpandableSongRow } from '@/components/worship-set/expandable-song-row'
 import { useApproveSuggestion, useRejectSuggestion } from '@/hooks/use-suggestions'
-import { Calendar, Edit, Users, Music, Settings, ArrowLeft, Trash2, Plus, Search, Crown, ChevronUp, ChevronDown, Eye, Mic2, Music2 } from 'lucide-react'
+import { Calendar, Edit, Users, Music, Settings, ArrowLeft, Trash2, Plus, Search, Crown, ChevronUp, ChevronDown, Eye, Mic2, Music2, Headphones, Check } from 'lucide-react'
 import Link from 'next/link'
 import { apiClient } from '@/lib/api-client'
 
@@ -69,6 +70,7 @@ interface Service {
       position: number
       isNew?: boolean
       keyOverride?: string | null
+      youtubeUrlOverride?: string | null
       singerId?: string | null
       singer?: {
         id: string
@@ -78,10 +80,12 @@ interface Service {
         id: string
         name: string
         defaultKey?: string
+        youtubeUrl?: string
         song: {
           id: string
           title: string
           artist: string
+          defaultYoutubeUrl?: string
         }
       }
     }[]
@@ -116,6 +120,7 @@ export default function ServiceDetailPage() {
   const [songToRemove, setSongToRemove] = useState<{ id: string; title: string } | null>(null)
   const [removingSong, setRemovingSong] = useState(false)
   const [editingSong, setEditingSong] = useState<Service['worshipSet']['setSongs'][0] | null>(null)
+  const [listenedSongIds, setListenedSongIds] = useState<Set<string>>(new Set())
   const { toast } = useToast()
   const approveSuggestion = useApproveSuggestion()
   const rejectSuggestion = useRejectSuggestion()
@@ -155,11 +160,41 @@ export default function ServiceDetailPage() {
     }
   }, [serviceId, toast, router])
 
+  const fetchListenedStatus = useCallback(async () => {
+    if (!session?.user?.id) return
+    try {
+      const { data, error } = await apiClient.get(
+        `/users/${session.user.id}/song-progress?upcoming=true`
+      )
+      if (error) throw new Error(error.message)
+      if (data) {
+        // Find the service in the response and extract listened song IDs
+        const serviceData = data.find((sp: any) => sp.service.id === serviceId)
+        if (serviceData) {
+          const listenedIds = new Set(
+            serviceData.songs
+              .filter((s: any) => s.listened)
+              .map((s: any) => s.setSong.id)
+          )
+          setListenedSongIds(listenedIds as Set<string>)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching listened status:', error)
+    }
+  }, [session?.user?.id, serviceId])
+
   useEffect(() => {
     if (serviceId) {
       fetchService()
     }
   }, [serviceId, fetchService])
+
+  useEffect(() => {
+    if (serviceId && session?.user?.id) {
+      fetchListenedStatus()
+    }
+  }, [serviceId, session?.user?.id, fetchListenedStatus])
 
   const handleConfirmDelete = async () => {
     if (!service) return
@@ -444,6 +479,18 @@ export default function ServiceDetailPage() {
     }
   }
 
+  const handleListenedChange = (setSongId: string, listened: boolean) => {
+    setListenedSongIds(prev => {
+      const next = new Set(prev)
+      if (listened) {
+        next.add(setSongId)
+      } else {
+        next.delete(setSongId)
+      }
+      return next
+    })
+  }
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -624,75 +671,43 @@ export default function ServiceDetailPage() {
           <CardContent>
             {service.worshipSet?.setSongs && service.worshipSet.setSongs.length > 0 ? (
               <div className="space-y-3">
+                {/* Practice progress indicator */}
+                {session?.user?.id && (
+                  <div className="flex items-center justify-between text-sm mb-4 p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Headphones className="h-4 w-4" />
+                      <span>Practice Progress</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {listenedSongIds.size}/{service.worshipSet.setSongs.length}
+                      </span>
+                      {listenedSongIds.size === service.worshipSet.setSongs.length && (
+                        <Badge variant="default" className="bg-green-600">
+                          <Check className="h-3 w-3 mr-1" />
+                          Complete
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {service.worshipSet.setSongs
                   .sort((a, b) => a.position - b.position)
-                  .map((setSong, index, sortedSongs) => {
-                    const displayKey = setSong.keyOverride || setSong.songVersion.defaultKey
-                    return (
-                      <div key={setSong.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium">{setSong.songVersion.song.title}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-                            <span>by {setSong.songVersion.song.artist}</span>
-                            {displayKey && (
-                              <Badge variant="outline" className="text-xs font-mono">
-                                <Music2 className="h-3 w-3 mr-1" />
-                                {displayKey}
-                              </Badge>
-                            )}
-                            {setSong.singer && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Mic2 className="h-3 w-3 mr-1" />
-                                {setSong.singer.name}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        {canManageWorshipSet && (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingSong(setSong)}
-                              className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                              title="Edit singer & key"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReorderSong(setSong.id, 'up')}
-                              disabled={index === 0}
-                              className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReorderSong(setSong.id, 'down')}
-                              disabled={index === sortedSongs.length - 1}
-                              className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSongToRemove({ id: setSong.id, title: setSong.songVersion.song.title })}
-                              className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
+                  .map((setSong, index, sortedSongs) => (
+                    <ExpandableSongRow
+                      key={setSong.id}
+                      setSong={setSong}
+                      index={index}
+                      totalSongs={sortedSongs.length}
+                      canManage={canManageWorshipSet}
+                      listened={listenedSongIds.has(setSong.id)}
+                      onEdit={() => setEditingSong(setSong)}
+                      onMoveUp={() => handleReorderSong(setSong.id, 'up')}
+                      onMoveDown={() => handleReorderSong(setSong.id, 'down')}
+                      onRemove={() => setSongToRemove({ id: setSong.id, title: setSong.songVersion.song.title })}
+                      onListenedChange={(listened) => handleListenedChange(setSong.id, listened)}
+                    />
+                  ))}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">

@@ -242,3 +242,75 @@ export const reorderSetSongs = async (req: Request & { user?: JwtPayload }, res:
     res.status(500).json({ error: { message: "Could not reorder songs" } });
   }
 };
+
+/**
+ * POST /setSongs/:id/listened
+ * Mark a song as listened by the current user
+ */
+export const markListened = async (req: Request & { user?: JwtPayload }, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: { message: "Unauthorized" } });
+    }
+
+    const { id } = req.params;
+
+    // Verify the setSong exists
+    const setSong = await prisma.setSong.findUnique({
+      where: { id },
+    });
+
+    if (!setSong) {
+      return res.status(404).json({ error: { message: "Set song not found" } });
+    }
+
+    // Create or update the progress record (upsert)
+    const progress = await prisma.userSetSongProgress.upsert({
+      where: {
+        userId_setSongId: {
+          userId: req.user.userId,
+          setSongId: id,
+        },
+      },
+      update: {
+        listenedAt: new Date(),
+      },
+      create: {
+        userId: req.user.userId,
+        setSongId: id,
+      },
+    });
+
+    res.json({ data: { listenedAt: progress.listenedAt } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: { message: "Could not mark song as listened" } });
+  }
+};
+
+/**
+ * DELETE /setSongs/:id/listened
+ * Unmark a song as listened by the current user
+ */
+export const unmarkListened = async (req: Request & { user?: JwtPayload }, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: { message: "Unauthorized" } });
+    }
+
+    const { id } = req.params;
+
+    // Delete the progress record if it exists
+    await prisma.userSetSongProgress.deleteMany({
+      where: {
+        userId: req.user.userId,
+        setSongId: id,
+      },
+    });
+
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: { message: "Could not unmark song as listened" } });
+  }
+};
