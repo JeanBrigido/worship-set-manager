@@ -16,7 +16,9 @@ import {
   ExternalLink,
   Check,
   Circle,
+  FileMusic,
 } from 'lucide-react'
+import Link from 'next/link'
 
 interface SetSong {
   id: string
@@ -34,6 +36,9 @@ interface SetSong {
     name: string
     defaultKey?: string
     youtubeUrl?: string
+    chordSheet?: {
+      id: string
+    } | null
     song: {
       id: string
       title: string
@@ -205,6 +210,19 @@ export function ExpandableSongRow({
                   Watch on YouTube
                   <ExternalLink className="h-3 w-3 ml-1" />
                 </Button>
+              )}
+
+              {setSong.songVersion.chordSheet && (
+                <Link href={`/set-songs/${setSong.id}/chords`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/30 border-purple-200 dark:border-purple-800"
+                  >
+                    <FileMusic className="h-4 w-4 mr-1" />
+                    View Chords
+                  </Button>
+                </Link>
               )}
 
               <Button

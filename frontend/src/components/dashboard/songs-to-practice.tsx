@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Headphones,
   ChevronRight,
+  FileMusic,
 } from 'lucide-react'
 
 interface SongProgress {
@@ -30,6 +31,9 @@ interface SongProgress {
     id: string
     name: string
     youtubeUrl?: string
+    chordSheet?: {
+      id: string
+    } | null
   }
   song: {
     id: string
@@ -350,19 +354,33 @@ export function SongsToPractice() {
                         </p>
                       </div>
 
-                      {/* YouTube button */}
-                      {song.youtubeUrl && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleYoutubeClick(song.setSong.id, song.youtubeUrl!)}
-                          className="shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
-                        >
-                          <Youtube className="h-4 w-4 mr-1" />
-                          <span className="hidden sm:inline">Watch</span>
-                          <ExternalLink className="h-3 w-3 ml-1" />
-                        </Button>
-                      )}
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {song.songVersion.chordSheet && (
+                          <Link href={`/set-songs/${song.setSong.id}/chords`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                            >
+                              <FileMusic className="h-4 w-4 mr-1" />
+                              <span className="hidden sm:inline">Chords</span>
+                            </Button>
+                          </Link>
+                        )}
+                        {song.youtubeUrl && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleYoutubeClick(song.setSong.id, song.youtubeUrl!)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                          >
+                            <Youtube className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Watch</span>
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
