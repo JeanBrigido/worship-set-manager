@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { useToast } from '@/hooks/use-toast'
 import { SuggestedSongs } from '@/components/worship-set/suggested-songs'
@@ -112,7 +113,7 @@ export default function ServiceDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showAddSongsModal, setShowAddSongsModal] = useState(false)
   const [songs, setSongs] = useState<Song[]>([])
-  const [selectedSongs, setSelectedSongs] = useState<string[]>([])
+  const [selectedSongVersions, setSelectedSongVersions] = useState<Record<string, string>>({})
   const [searchTerm, setSearchTerm] = useState('')
   const [loadingSongs, setLoadingSongs] = useState(false)
   const [addingSongs, setAddingSongs] = useState(false)
@@ -247,21 +248,41 @@ export default function ServiceDetailPage() {
 
   const handleOpenAddSongsModal = () => {
     setShowAddSongsModal(true)
-    setSelectedSongs([])
+    setSelectedSongVersions({})
     setSearchTerm('')
     fetchSongs()
   }
 
-  const handleToggleSongSelection = (songId: string) => {
-    setSelectedSongs(prev =>
-      prev.includes(songId)
-        ? prev.filter(id => id !== songId)
-        : [...prev, songId]
-    )
+  const handleToggleSongSelection = (songId: string, versionId?: string) => {
+    setSelectedSongVersions(prev => {
+      const newSelection = { ...prev }
+      if (songId in newSelection) {
+        // If already selected and no specific version provided, deselect
+        if (!versionId) {
+          delete newSelection[songId]
+        } else {
+          // Update to different version
+          newSelection[songId] = versionId
+        }
+      } else {
+        // Select the song with the specified version (or first version as default)
+        const song = songs.find(s => s.id === songId)
+        newSelection[songId] = versionId || song?.versions[0]?.id || ''
+      }
+      return newSelection
+    })
+  }
+
+  const handleVersionChange = (songId: string, versionId: string) => {
+    setSelectedSongVersions(prev => ({
+      ...prev,
+      [songId]: versionId
+    }))
   }
 
   const handleAddSongsToSet = async () => {
-    if (selectedSongs.length === 0) {
+    const selectedEntries = Object.entries(selectedSongVersions)
+    if (selectedEntries.length === 0) {
       toast({
         title: 'No Songs Selected',
         description: 'Please select at least one song to add.',
@@ -273,21 +294,16 @@ export default function ServiceDetailPage() {
     try {
       setAddingSongs(true)
 
-      // Create worship set songs for each selected song
-      const setSongPromises = selectedSongs.map(async (songId, index) => {
-        // Find the selected song to get its first version ID
-        const song = songs.find(s => s.id === songId)
-        if (!song || !song.versions || song.versions.length === 0) {
-          console.error(`Song ${songId} not found or has no versions`)
+      // Create worship set songs for each selected song with its chosen version
+      const setSongPromises = selectedEntries.map(async ([songId, versionId], index) => {
+        if (!versionId) {
+          console.error(`No version selected for song ${songId}`)
           return false
         }
 
-        // Use the first version of the song for now
-        const songVersionId = song.versions[0].id
-
         const { data, error } = await apiClient.post('/set-songs', {
           setId: service?.worshipSet?.id,
-          songVersionId: songVersionId,
+          songVersionId: versionId,
           position: (service?.worshipSet?.setSongs?.length || 0) + index + 1,
         })
         return !error
@@ -298,10 +314,10 @@ export default function ServiceDetailPage() {
       if (results.every(success => success)) {
         toast({
           title: 'Success',
-          description: `Added ${selectedSongs.length} song(s) to worship set.`,
+          description: `Added ${selectedEntries.length} song(s) to worship set.`,
         })
         setShowAddSongsModal(false)
-        setSelectedSongs([]) // Clear selection
+        setSelectedSongVersions({}) // Clear selection
         setSearchTerm('') // Clear search
         fetchService() // Refresh the service data
       } else {
@@ -836,25 +852,75 @@ export default function ServiceDetailPage() {
                 </div>
               ) : filteredSongs.length > 0 ? (
                 <div className="space-y-2 p-4">
-                  {filteredSongs.map((song) => (
-                    <div
-                      key={song.id}
-                      className="flex items-center space-x-3 p-3 hover:bg-muted/50 rounded-lg"
-                    >
-                      <Checkbox
-                        checked={selectedSongs.includes(song.id)}
-                        onCheckedChange={() => handleToggleSongSelection(song.id)}
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">{song.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {song.artist && `by ${song.artist}`}
-                          {song.versions.length > 0 && song.versions[0].defaultKey && ` • Key: ${song.versions[0].defaultKey}`}
-                          {song.language && ` • ${song.language}`}
+                  {filteredSongs.map((song) => {
+                    const isSelected = song.id in selectedSongVersions
+                    const selectedVersionId = selectedSongVersions[song.id]
+                    const hasMultipleVersions = song.versions.length > 1
+                    const selectedVersion = song.versions.find(v => v.id === selectedVersionId) || song.versions[0]
+
+                    return (
+                      <div
+                        key={song.id}
+                        className={`p-3 rounded-lg border transition-colors ${
+                          isSelected
+                            ? 'bg-primary/5 border-primary/30'
+                            : 'hover:bg-muted/50 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleSongSelection(song.id)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">{song.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {song.artist && `by ${song.artist}`}
+                              {song.language && ` • ${song.language}`}
+                            </div>
+                          </div>
                         </div>
+
+                        {/* Version selector - show when selected OR when song has multiple versions */}
+                        {isSelected && song.versions.length > 0 && (
+                          <div className="mt-3 ml-7 flex items-center gap-3">
+                            {hasMultipleVersions ? (
+                              <>
+                                <span className="text-sm text-muted-foreground">Version:</span>
+                                <Select
+                                  value={selectedVersionId}
+                                  onValueChange={(value) => handleVersionChange(song.id, value)}
+                                >
+                                  <SelectTrigger className="w-[200px] h-8">
+                                    <SelectValue placeholder="Select version" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {song.versions.map((version) => (
+                                      <SelectItem key={version.id} value={version.id}>
+                                        <div className="flex items-center gap-2">
+                                          <span>{version.name}</span>
+                                          {version.defaultKey && (
+                                            <span className="text-xs text-muted-foreground">
+                                              (Key: {version.defaultKey})
+                                            </span>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                Version: {selectedVersion?.name}
+                                {selectedVersion?.defaultKey && ` • Key: ${selectedVersion.defaultKey}`}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
@@ -866,10 +932,10 @@ export default function ServiceDetailPage() {
             </div>
 
             {/* Selected Count */}
-            {selectedSongs.length > 0 && (
+            {Object.keys(selectedSongVersions).length > 0 && (
               <div className="bg-muted/30 p-3 rounded-lg">
                 <p className="text-sm font-medium">
-                  {selectedSongs.length} song(s) selected
+                  {Object.keys(selectedSongVersions).length} song(s) selected
                 </p>
               </div>
             )}
@@ -885,7 +951,7 @@ export default function ServiceDetailPage() {
               </Button>
               <Button
                 onClick={handleAddSongsToSet}
-                disabled={selectedSongs.length === 0 || addingSongs}
+                disabled={Object.keys(selectedSongVersions).length === 0 || addingSongs}
               >
                 {addingSongs ? (
                   <>
@@ -895,7 +961,7 @@ export default function ServiceDetailPage() {
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add {selectedSongs.length > 0 ? `${selectedSongs.length} ` : ''}Song{selectedSongs.length !== 1 ? 's' : ''}
+                    Add {Object.keys(selectedSongVersions).length > 0 ? `${Object.keys(selectedSongVersions).length} ` : ''}Song{Object.keys(selectedSongVersions).length !== 1 ? 's' : ''}
                   </>
                 )}
               </Button>
