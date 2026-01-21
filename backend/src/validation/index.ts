@@ -13,3 +13,4 @@ export * from "./availabilitySchemas";
 export * from "./notificationsSchemas";
 export * from "./instrumentsSchemas";
 export * from "./singerSongKeysSchemas";
+export * from "./chordSheetsSchemas";
