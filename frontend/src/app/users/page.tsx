@@ -55,15 +55,16 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await apiClient.get('/users')
+      const { data, error } = await apiClient.get<User[]>('/users')
       if (error) {
         throw new Error(error.message)
       }
       setUsers(data || [])
     } catch (error) {
+      console.error('Error fetching users:', error)
       toast({
         title: 'Error',
-        description: 'Failed to load users.',
+        description: error instanceof Error ? error.message : 'Failed to load users.',
         variant: 'destructive',
       })
     } finally {

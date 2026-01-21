@@ -8,6 +8,78 @@ interface JwtPayload {
 }
 
 /**
+ * Helper function to recalculate leader assignments for all future services
+ * of a given service type based on the current leader rotation.
+ */
+async function recalculateLeaderAssignments(serviceTypeId: string): Promise<void> {
+  // Get all active rotations for this service type ordered by rotationOrder
+  const rotations = await prisma.leaderRotation.findMany({
+    where: {
+      serviceTypeId,
+      isActive: true
+    },
+    orderBy: { rotationOrder: 'asc' }
+  });
+
+  if (rotations.length === 0) {
+    // No active rotations - clear all leader assignments for future services
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const futureServices = await prisma.service.findMany({
+      where: {
+        serviceTypeId,
+        serviceDate: { gte: today }
+      },
+      include: { worshipSet: true },
+      orderBy: { serviceDate: 'asc' }
+    });
+
+    // Clear leader assignments for future services
+    for (const service of futureServices) {
+      if (service.worshipSet) {
+        await prisma.worshipSet.update({
+          where: { id: service.worshipSet.id },
+          data: { leaderUserId: null }
+        });
+      }
+    }
+    return;
+  }
+
+  // Get all future services for this service type ordered by date
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const futureServices = await prisma.service.findMany({
+    where: {
+      serviceTypeId,
+      serviceDate: { gte: today }
+    },
+    include: { worshipSet: true },
+    orderBy: { serviceDate: 'asc' }
+  });
+
+  if (futureServices.length === 0) {
+    return; // No future services to update
+  }
+
+  // Assign leaders based on rotation order (cycling through rotations)
+  for (let i = 0; i < futureServices.length; i++) {
+    const service = futureServices[i];
+    const rotationIndex = i % rotations.length;
+    const leaderUserId = rotations[rotationIndex].userId;
+
+    if (service.worshipSet) {
+      await prisma.worshipSet.update({
+        where: { id: service.worshipSet.id },
+        data: { leaderUserId }
+      });
+    }
+  }
+}
+
+/**
  * GET /leader-rotations
  * List all leader rotations with user and service type details
  */
@@ -95,6 +167,9 @@ export const createRotation = async (req: Request & { user?: JwtPayload }, res: 
       }
     });
 
+    // Recalculate leader assignments for future services
+    await recalculateLeaderAssignments(serviceTypeId);
+
     res.status(201).json({ data: rotation });
   } catch (err: any) {
     console.error("Error creating rotation:", err);
@@ -134,6 +209,9 @@ export const updateRotation = async (req: Request & { user?: JwtPayload }, res: 
       }
     });
 
+    // Recalculate leader assignments for future services
+    await recalculateLeaderAssignments(rotation.serviceTypeId);
+
     res.json({ data: rotation });
   } catch (err: any) {
     console.error("Error updating rotation:", err);
@@ -165,10 +243,13 @@ export const deleteRotation = async (req: Request & { user?: JwtPayload }, res: 
     const { id } = req.params;
 
     // Soft delete by setting isActive to false
-    await prisma.leaderRotation.update({
+    const rotation = await prisma.leaderRotation.update({
       where: { id },
       data: { isActive: false }
     });
+
+    // Recalculate leader assignments for future services
+    await recalculateLeaderAssignments(rotation.serviceTypeId);
 
     res.status(204).send();
   } catch (err: any) {
@@ -274,5 +355,70 @@ export const getRotationsByServiceType = async (req: Request & { user?: JwtPaylo
   } catch (err) {
     console.error("Error fetching rotations by service type:", err);
     res.status(500).json({ error: { message: "Could not fetch leader rotations" } });
+  }
+};
+
+/**
+ * PUT /leader-rotations/reorder
+ * Reorder rotations for a service type (Admin only)
+ * Expects: { serviceTypeId: string, rotationIds: string[] } where rotationIds is in the new order
+ */
+export const reorderRotations = async (req: Request & { user?: JwtPayload }, res: Response) => {
+  try {
+    if (!req.user?.roles.includes(Role.admin)) {
+      return res.status(403).json({ error: { message: "Admin access required" } });
+    }
+
+    const { serviceTypeId, rotationIds } = req.body as { serviceTypeId: string; rotationIds: string[] };
+
+    if (!serviceTypeId || !rotationIds || !Array.isArray(rotationIds)) {
+      return res.status(400).json({ error: { message: "serviceTypeId and rotationIds array are required" } });
+    }
+
+    // Two-phase update to avoid unique constraint conflicts on [serviceTypeId, rotationOrder]
+    // Phase 1: Set all to temporary negative values (can run in parallel since negatives don't conflict)
+    // Phase 2: Set to final positive values (can run in parallel since we cleared all positives)
+    await prisma.$transaction(async (tx) => {
+      // Phase 1: Set to temporary negative values (parallel)
+      await Promise.all(
+        rotationIds.map((id, index) =>
+          tx.leaderRotation.update({
+            where: { id },
+            data: { rotationOrder: -(index + 1) }
+          })
+        )
+      );
+
+      // Phase 2: Set to final positive values (parallel)
+      await Promise.all(
+        rotationIds.map((id, index) =>
+          tx.leaderRotation.update({
+            where: { id },
+            data: { rotationOrder: index + 1 }
+          })
+        )
+      );
+    });
+
+    // Recalculate leader assignments for future services
+    await recalculateLeaderAssignments(serviceTypeId);
+
+    // Fetch and return the updated rotations
+    const rotations = await prisma.leaderRotation.findMany({
+      where: {
+        serviceTypeId,
+        isActive: true
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, roles: true } },
+        serviceType: { select: { id: true, name: true } }
+      },
+      orderBy: { rotationOrder: 'asc' }
+    });
+
+    res.json({ data: rotations });
+  } catch (err) {
+    console.error("Error reordering rotations:", err);
+    res.status(500).json({ error: { message: "Could not reorder leader rotations" } });
   }
 };

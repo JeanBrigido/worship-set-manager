@@ -8,12 +8,14 @@ export const createSetSongSchema = z.object({
   youtubeUrlOverride: z.string().url().optional(),
   isNew: z.boolean().optional(),
   notes: z.string().max(500).optional(),
+  singerId: z.string().uuid("Must be a valid UUID").nullable().optional(),
 });
 
 export const updateSetSongSchema = z.object({
   position: z.number().int().min(1).optional(),
-  keyOverride: z.string().optional(),
-  youtubeUrlOverride: z.string().url().optional(),
+  keyOverride: z.string().nullable().optional(),
+  youtubeUrlOverride: z.string().url().nullable().optional(),
   isNew: z.boolean().optional(),
-  notes: z.string().max(500).optional(),
+  notes: z.string().max(500).nullable().optional(),
+  singerId: z.string().uuid("Must be a valid UUID").nullable().optional(),
 });

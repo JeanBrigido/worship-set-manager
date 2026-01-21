@@ -9,7 +9,8 @@ import {
   updateRotation,
   deleteRotation,
   getNextLeader,
-  getRotationsByServiceType
+  getRotationsByServiceType,
+  reorderRotations
 } from "../controllers/leaderRotationsController";
 
 const router = Router();
@@ -31,6 +32,9 @@ router.get("/:id", validateUuid("id"), getRotation);
 
 // POST /leader-rotations - Create rotation (Admin only)
 router.post("/", requireRole(["admin"]), createRotation);
+
+// PUT /leader-rotations/reorder - Reorder rotations (Admin only)
+router.put("/reorder", requireRole(["admin"]), reorderRotations);
 
 // PUT /leader-rotations/:id - Update rotation (Admin only)
 router.put("/:id", validateUuid("id"), requireRole(["admin"]), updateRotation);

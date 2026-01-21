@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const setId = searchParams.get('setId');
 
-    let endpoint = `${API_BASE}/suggestion-slots`;
+    let endpoint = `${API_BASE}/api/suggestion-slots`;
     if (setId) {
-      endpoint = `${API_BASE}/suggestion-slots/set/${setId}`;
+      endpoint = `${API_BASE}/api/suggestion-slots/set/${setId}`;
     }
 
     const response = await fetch(endpoint, {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const token = await generateJwtToken();
     const body = await request.json();
 
-    const response = await fetch(`${API_BASE}/suggestion-slots`, {
+    const response = await fetch(`${API_BASE}/api/suggestion-slots`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

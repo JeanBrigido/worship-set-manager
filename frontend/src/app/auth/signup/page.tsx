@@ -58,11 +58,12 @@ function SignUpForm() {
       const result = await response.json()
 
       if (!response.ok) {
-        if (result.error?.includes('already exists')) {
+        const errorMessage = result.error?.message || result.error || 'Failed to create account'
+        if (typeof errorMessage === 'string' && errorMessage.includes('already exists')) {
           setError('An account with this email already exists.')
           return
         }
-        throw new Error(result.error || 'Failed to create account')
+        throw new Error(errorMessage)
       }
 
       // Auto sign-in after successful registration

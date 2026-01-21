@@ -9,17 +9,72 @@ interface JwtPayload {
 
 /**
  * GET /services
+ * Query params:
+ *   - upcoming: "true" to filter to future services only (serviceDate >= start of today)
+ *   - limit: number of results to return
+ *   - startDate: ISO date string to filter services from this date (inclusive)
+ *   - endDate: ISO date string to filter services until this date (inclusive)
  */
 export const listServices = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
+    const { upcoming, limit, startDate, endDate } = req.query;
+
+    // Build where clause
+    const where: { serviceDate?: { gte?: Date; lte?: Date } } = {};
+
+    if (upcoming === "true") {
+      // Filter to services from today onwards (start of day in UTC)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      where.serviceDate = { gte: today };
+    } else if (startDate || endDate) {
+      // Filter by date range
+      where.serviceDate = {};
+      if (startDate) {
+        where.serviceDate.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        where.serviceDate.lte = new Date(endDate as string);
+      }
+    }
+
     const services = await prisma.service.findMany({
+      where,
       orderBy: { serviceDate: "asc" },
+      take: limit ? parseInt(limit as string) : undefined,
       include: {
         serviceType: true,
+        leader: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         worshipSet: {
-          include: {
+          select: {
+            id: true,
+            status: true,
+            leaderUserId: true,
+            leaderUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              }
+            },
             _count: {
               select: { setSongs: true }
+            },
+            assignments: {
+              select: {
+                id: true,
+                user: {
+                  select: { name: true }
+                },
+                instrument: {
+                  select: { displayName: true }
+                }
+              }
             }
           }
         },
@@ -45,11 +100,24 @@ export const getService = async (req: Request & { user?: JwtPayload }, res: Resp
         leader: true,
         worshipSet: {
           include: {
+            leaderUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
             setSongs: {
               include: {
                 songVersion: {
                   include: {
                     song: true
+                  }
+                },
+                singer: {
+                  select: {
+                    id: true,
+                    name: true
                   }
                 }
               },
@@ -150,9 +218,10 @@ export const updateService = async (req: Request & { user?: JwtPayload }, res: R
 
     const { id } = req.params;
     // Accept both camelCase and snake_case
-    const { date, serviceTypeId, service_type_id, status, leaderId, leader_id } = req.body;
+    const { date, serviceTypeId, service_type_id, status, leaderId, leader_id, worshipSetLeaderId, worship_set_leader_id } = req.body;
     const typeId = serviceTypeId || service_type_id;
     const leaderUserId = leaderId || leader_id;
+    const worshipLeaderId = worshipSetLeaderId || worship_set_leader_id;
 
     // Build update data object, only including fields that are provided
     const updateData: {
@@ -182,9 +251,41 @@ export const updateService = async (req: Request & { user?: JwtPayload }, res: R
       include: {
         serviceType: true,
         leader: true,
-        worshipSet: true,
+        worshipSet: {
+          include: {
+            leaderUser: {
+              select: { id: true, name: true, email: true }
+            }
+          }
+        },
       },
     });
+
+    // Update worship set leader if provided (manual override - does not affect rotation)
+    if (worshipLeaderId !== undefined && updated.worshipSet) {
+      await prisma.worshipSet.update({
+        where: { id: updated.worshipSet.id },
+        data: { leaderUserId: worshipLeaderId || null }
+      });
+
+      // Re-fetch to get updated worship set with leader
+      const refreshed = await prisma.service.findUnique({
+        where: { id },
+        include: {
+          serviceType: true,
+          leader: true,
+          worshipSet: {
+            include: {
+              leaderUser: {
+                select: { id: true, name: true, email: true }
+              }
+            }
+          },
+        },
+      });
+
+      return res.json({ data: refreshed });
+    }
 
     res.json({ data: updated });
   } catch (err: any) {
@@ -283,17 +384,18 @@ export const updateServiceAssignments = async (req: Request & { user?: JwtPayloa
 
     const setId = service.worshipSet.id;
 
-    // Process assignments in a transaction
+    // Process assignments in a transaction - only update instruments that are passed
     await prisma.$transaction(async (tx) => {
-      // First, delete existing assignments for this worship set
-      await tx.assignment.deleteMany({
-        where: { setId }
-      });
-
-      // Then create new assignments from the Record<instrumentId, userId> format
       for (const instrumentId in assignments) {
         const userId = assignments[instrumentId];
-        if (userId && typeof userId === 'string' && userId.trim() !== '' && instrumentId) {
+
+        // Delete existing assignment for this specific instrument
+        await tx.assignment.deleteMany({
+          where: { setId, instrumentId }
+        });
+
+        // Create new assignment if userId is provided (not empty)
+        if (userId && typeof userId === 'string' && userId.trim() !== '') {
           await tx.assignment.create({
             data: {
               setId,

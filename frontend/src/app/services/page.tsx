@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CardLoading } from '@/components/ui/page-loading'
 import { useToast } from '@/hooks/use-toast'
-import { Calendar, Plus, Users, Music, Settings } from 'lucide-react'
+import { Calendar, Plus, Users, Music, Settings, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { apiClient } from '@/lib/api-client'
 
@@ -27,6 +28,7 @@ interface Service {
   worshipSet?: {
     id: string
     status: 'draft' | 'published'
+    leaderUserId?: string
     assignments?: {
       id: string
       user: {
@@ -40,9 +42,22 @@ interface Service {
 }
 
 export default function ServicesPage() {
+  const { data: session } = useSession()
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
+
+  // Check if current user is admin or leader (can create services)
+  const isAdmin = session?.user?.roles?.includes('admin')
+  const isLeader = session?.user?.roles?.includes('leader')
+  const canCreateService = isAdmin || isLeader
+
+  // Check if current user can manage a specific service's worship set
+  const canManageService = (service: Service) => {
+    if (isAdmin) return true
+    if (service.worshipSet?.leaderUserId === session?.user?.id) return true
+    return false
+  }
 
   useEffect(() => {
     fetchServices()
@@ -51,7 +66,7 @@ export default function ServicesPage() {
   const fetchServices = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get<Service[]>('/services')
+      const response = await apiClient.get<Service[]>('/services?upcoming=true&limit=10')
 
       if (response.error) {
         throw new Error(response.error.message)
@@ -96,12 +111,14 @@ export default function ServicesPage() {
             </Link>
           </Button>
         </div>
-        <Button asChild>
-          <Link href="/services/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Create New Service
-          </Link>
-        </Button>
+{canCreateService && (
+          <Button asChild>
+            <Link href="/services/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Service
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -111,7 +128,7 @@ export default function ServicesPage() {
             Upcoming Services
           </CardTitle>
           <CardDescription>
-            Your scheduled worship services
+            Showing up to 10 upcoming services
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -171,8 +188,17 @@ export default function ServicesPage() {
                         </Button>
                         <Button size="sm" variant="outline" asChild>
                           <Link href={`/services/${service.id}`}>
-                            <Settings className="mr-1 h-4 w-4" />
-                            Manage
+                            {canManageService(service) ? (
+                              <>
+                                <Settings className="mr-1 h-4 w-4" />
+                                Manage
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="mr-1 h-4 w-4" />
+                                View
+                              </>
+                            )}
                           </Link>
                         </Button>
                       </div>

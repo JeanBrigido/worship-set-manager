@@ -15,13 +15,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
-import { useLeaderRotations, useCreateLeaderRotation, useDeleteLeaderRotation, useAssignLeader } from '@/hooks/use-leader-rotations'
+import { useLeaderRotations, useCreateLeaderRotation, useDeleteLeaderRotation, useAssignLeader, useReorderLeaderRotations } from '@/hooks/use-leader-rotations'
 import { useSuggestionSlotsByWorshipSet } from '@/hooks/use-suggestions'
 import { AssignSuggesterModal } from '@/components/worship-set/assign-suggester-modal'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import { ArrowLeft, Plus, Trash2, UserCheck, Calendar, Users, Settings, ListChecks, Guitar } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, UserCheck, Calendar, Users, Settings, ListChecks, Guitar, GripVertical } from 'lucide-react'
 import Link from 'next/link'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface ServiceType {
   id: string
@@ -52,6 +55,80 @@ interface Service {
       email: string
     }
   }
+}
+
+interface LeaderRotation {
+  id: string
+  userId: string
+  serviceTypeId: string
+  rotationOrder: number
+  isActive: boolean
+  user: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
+// Sortable row component for drag and drop
+function SortableRotationRow({
+  rotation,
+  onDelete,
+  isDeleting
+}: {
+  rotation: LeaderRotation
+  onDelete: (id: string) => void
+  isDeleting: boolean
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: rotation.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-accent rounded"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </button>
+          {rotation.rotationOrder}
+        </div>
+      </TableCell>
+      <TableCell className="font-medium">{rotation.user.name}</TableCell>
+      <TableCell>{rotation.user.email}</TableCell>
+      <TableCell>
+        <Badge variant={rotation.isActive ? 'default' : 'secondary'}>
+          {rotation.isActive ? 'Active' : 'Inactive'}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(rotation.id)}
+          disabled={isDeleting}
+          aria-label={`Remove ${rotation.user.name} from rotation`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  )
 }
 
 export default function AdminDashboard() {
@@ -131,6 +208,15 @@ export default function AdminDashboard() {
   const createRotation = useCreateLeaderRotation()
   const deleteRotation = useDeleteLeaderRotation()
   const assignLeader = useAssignLeader()
+  const reorderRotations = useReorderLeaderRotations()
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   // Filter users with leader role
   const leaders = users.filter(u => u.roles.includes('leader'))
@@ -222,6 +308,40 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleDragEnd = (event: DragEndEvent, serviceTypeId: string) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const rotationsForType = rotationsByServiceType[serviceTypeId] || []
+      const oldIndex = rotationsForType.findIndex((r) => r.id === active.id)
+      const newIndex = rotationsForType.findIndex((r) => r.id === over.id)
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(rotationsForType, oldIndex, newIndex)
+        const rotationIds = newOrder.map((r) => r.id)
+
+        // Fire and forget - don't block on the API call
+        reorderRotations.mutate(
+          { serviceTypeId, rotationIds },
+          {
+            onError: () => {
+              toast({
+                title: 'Error',
+                description: 'Failed to reorder rotations. Please refresh the page.',
+                variant: 'destructive',
+              })
+            }
+          }
+        )
+      }
+    }
+  }
+
+  const openAddRotationForServiceType = (serviceTypeId: string) => {
+    setNewRotation({ ...newRotation, serviceTypeId })
+    setIsAddRotationOpen(true)
+  }
+
   // Show loading state while checking authorization
   if (isLoading) {
     return (
@@ -247,7 +367,7 @@ export default function AdminDashboard() {
         icon={<Settings className="h-8 w-8" />}
       />
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Link href="/">
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -258,6 +378,12 @@ export default function AdminDashboard() {
           <Button variant="outline" size="sm">
             <Guitar className="mr-2 h-4 w-4" />
             Manage Instruments
+          </Button>
+        </Link>
+        <Link href="/admin/service-types">
+          <Button variant="outline" size="sm">
+            <Calendar className="mr-2 h-4 w-4" />
+            Manage Service Types
           </Button>
         </Link>
       </div>
@@ -354,68 +480,67 @@ export default function AdminDashboard() {
               <p className="text-sm text-muted-foreground">Contact an administrator to add service types</p>
             </div>
           ) : (
-            serviceTypes.map((serviceType) => (
-              <div key={serviceType.id} className="mb-6 last:mb-0">
-                <h3 className="text-lg font-semibold mb-3">{serviceType.name}</h3>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[80px]">Order</TableHead>
-                        <TableHead className="min-w-[150px]">Leader</TableHead>
-                        <TableHead className="min-w-[200px]">Email</TableHead>
-                        <TableHead className="min-w-[100px]">Status</TableHead>
-                        <TableHead className="text-right min-w-[100px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {rotationsByServiceType[serviceType.id]?.length > 0 ? (
-                        rotationsByServiceType[serviceType.id]
-                          .sort((a, b) => a.rotationOrder - b.rotationOrder)
-                          .map((rotation) => (
-                            <TableRow key={rotation.id}>
-                              <TableCell>{rotation.rotationOrder}</TableCell>
-                              <TableCell className="font-medium">{rotation.user.name}</TableCell>
-                              <TableCell>{rotation.user.email}</TableCell>
-                              <TableCell>
-                                <Badge variant={rotation.isActive ? 'default' : 'secondary'}>
-                                  {rotation.isActive ? 'Active' : 'Inactive'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
+            serviceTypes.map((serviceType) => {
+              const rotationsForType = (rotationsByServiceType[serviceType.id] || [])
+                .sort((a, b) => a.rotationOrder - b.rotationOrder)
+
+              return (
+                <div key={serviceType.id} className="mb-6 last:mb-0">
+                  <h3 className="text-lg font-semibold mb-3">{serviceType.name}</h3>
+                  <div className="overflow-x-auto">
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event) => handleDragEnd(event, serviceType.id)}
+                    >
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[100px]">Order</TableHead>
+                            <TableHead className="min-w-[150px]">Leader</TableHead>
+                            <TableHead className="min-w-[200px]">Email</TableHead>
+                            <TableHead className="min-w-[100px]">Status</TableHead>
+                            <TableHead className="text-right min-w-[100px]">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {rotationsForType.length > 0 ? (
+                            <SortableContext
+                              items={rotationsForType.map(r => r.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {rotationsForType.map((rotation) => (
+                                <SortableRotationRow
+                                  key={rotation.id}
+                                  rotation={rotation}
+                                  onDelete={setDeleteRotationId}
+                                  isDeleting={deleteRotation.isPending}
+                                />
+                              ))}
+                            </SortableContext>
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p>No leaders in rotation for this service type</p>
                                 <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setDeleteRotationId(rotation.id)}
-                                  disabled={deleteRotation.isPending}
-                                  aria-label={`Remove ${rotation.user.name} from rotation`}
+                                  variant="outline"
+                                  className="mt-4"
+                                  onClick={() => openAddRotationForServiceType(serviceType.id)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add First Leader
                                 </Button>
                               </TableCell>
                             </TableRow>
-                          ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>No leaders in rotation for this service type</p>
-                            <Button
-                              variant="outline"
-                              className="mt-4"
-                              onClick={() => setIsAddRotationOpen(true)}
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add First Leader
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </DndContext>
+                  </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </CardContent>
       </Card>
@@ -423,8 +548,17 @@ export default function AdminDashboard() {
       {/* Upcoming Services with Leader Assignments */}
       <Card>
         <CardHeader>
-          <CardTitle>Upcoming Services</CardTitle>
-          <CardDescription>View and manage leader assignments for upcoming services</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Upcoming Services</CardTitle>
+              <CardDescription>View and manage leader assignments for upcoming services</CardDescription>
+            </div>
+            {upcomingServices.length > 5 && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/services">View all ({upcomingServices.length})</Link>
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {upcomingServices.length === 0 ? (
@@ -451,7 +585,7 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {upcomingServices.map((service) => (
+                  {upcomingServices.slice(0, 5).map((service) => (
                     <TableRow key={service.id}>
                       <TableCell>
                         {new Date(service.serviceDate).toLocaleDateString('en-US', {
@@ -566,11 +700,20 @@ export default function AdminDashboard() {
       {/* Song Suggestion Management */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ListChecks className="h-5 w-5" />
-            Song Suggestion Management
-          </CardTitle>
-          <CardDescription>Assign song suggesters to upcoming services</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ListChecks className="h-5 w-5" />
+                Song Suggestion Management
+              </CardTitle>
+              <CardDescription>Assign song suggesters to upcoming services</CardDescription>
+            </div>
+            {upcomingServices.length > 5 && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/services">View all ({upcomingServices.length})</Link>
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {upcomingServices.length === 0 ? (
@@ -596,7 +739,7 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {upcomingServices.map((service) => {
+                  {upcomingServices.slice(0, 5).map((service) => {
                     // Get suggestion slots for this worship set
                     const slots = service.worshipSet?.id
                       ? allSlots.filter((slot: any) => slot.setId === service.worshipSet?.id)

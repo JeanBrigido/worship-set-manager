@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // Forward query parameters to backend
     const { searchParams } = new URL(request.url)
     const queryString = searchParams.toString()
-    const url = queryString ? `${API_BASE}/default-assignments?${queryString}` : `${API_BASE}/default-assignments`
+    const url = queryString ? `${API_BASE}/api/default-assignments?${queryString}` : `${API_BASE}/api/default-assignments`
 
     const response = await fetch(url, {
       headers: {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     const token = await generateJwtToken()
     const body = await request.json()
 
-    const response = await fetch(`${API_BASE}/default-assignments`, {
+    const response = await fetch(`${API_BASE}/api/default-assignments`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

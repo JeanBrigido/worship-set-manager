@@ -14,8 +14,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { useToast } from '@/hooks/use-toast'
 import { SuggestedSongs } from '@/components/worship-set/suggested-songs'
+import { EditSetSongModal } from '@/components/worship-set/edit-set-song-modal'
 import { useApproveSuggestion, useRejectSuggestion } from '@/hooks/use-suggestions'
-import { Calendar, Edit, Users, Music, Settings, ArrowLeft, Trash2, Plus, Search, Crown, ChevronUp, ChevronDown } from 'lucide-react'
+import { Calendar, Edit, Users, Music, Settings, ArrowLeft, Trash2, Plus, Search, Crown, ChevronUp, ChevronDown, Eye, Mic2, Music2 } from 'lucide-react'
 import Link from 'next/link'
 import { apiClient } from '@/lib/api-client'
 
@@ -67,8 +68,15 @@ interface Service {
       id: string
       position: number
       isNew?: boolean
+      keyOverride?: string | null
+      singerId?: string | null
+      singer?: {
+        id: string
+        name: string
+      } | null
       songVersion: {
         id: string
+        name: string
         defaultKey?: string
         song: {
           id: string
@@ -107,6 +115,7 @@ export default function ServiceDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [songToRemove, setSongToRemove] = useState<{ id: string; title: string } | null>(null)
   const [removingSong, setRemovingSong] = useState(false)
+  const [editingSong, setEditingSong] = useState<Service['worshipSet']['setSongs'][0] | null>(null)
   const { toast } = useToast()
   const approveSuggestion = useApproveSuggestion()
   const rejectSuggestion = useRejectSuggestion()
@@ -511,18 +520,22 @@ export default function ServiceDetailPage() {
               Back to Services
             </Link>
           </Button>
-          <div className="flex gap-2">
-            <Button asChild>
-              <Link href={`/services/${serviceId}/edit`}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Service
-              </Link>
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)} aria-label="Delete service">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-          </div>
+          {canManageWorshipSet && (
+            <div className="flex gap-2">
+              <Button asChild>
+                <Link href={`/services/${serviceId}/edit`}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Service
+                </Link>
+              </Button>
+              {isAdmin && (
+                <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)} aria-label="Delete service">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -554,27 +567,17 @@ export default function ServiceDetailPage() {
               <span className="text-sm font-medium">Time:</span>
               <span className="text-sm">{service.serviceType.defaultStartTime}</span>
             </div>
-            {service.leader && (
-              <div className="space-y-2">
-                <span className="text-sm font-medium">Service Leader:</span>
-                <div className="pl-4 border-l-2 border-primary/20">
-                  <div className="text-sm">{service.leader.name}</div>
-                  <div className="text-xs text-muted-foreground">{service.leader.email}</div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Leader:</span>
+              {service.worshipSet?.leaderUser ? (
+                <div className="text-sm flex items-center gap-2">
+                  <Crown className="h-3 w-3 text-yellow-500" />
+                  {service.worshipSet.leaderUser.name}
                 </div>
-              </div>
-            )}
-            {service.worshipSet?.leaderUser && (
-              <div className="space-y-2">
-                <span className="text-sm font-medium">Worship Set Leader:</span>
-                <div className="pl-4 border-l-2 border-yellow-500/20">
-                  <div className="text-sm flex items-center gap-2">
-                    <Crown className="h-3 w-3 text-yellow-500" />
-                    {service.worshipSet.leaderUser.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">{service.worshipSet.leaderUser.email}</div>
-                </div>
-              </div>
-            )}
+              ) : (
+                <span className="text-sm text-muted-foreground">Not assigned</span>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -605,14 +608,16 @@ export default function ServiceDetailPage() {
                     {service.worshipSet.status}
                   </Badge>
                 )}
-                <Button
-                  size="sm"
-                  onClick={handleOpenAddSongsModal}
-                  disabled={(service.worshipSet?.setSongs?.length ?? 0) >= 6}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Songs
-                </Button>
+                {canManageWorshipSet && (
+                  <Button
+                    size="sm"
+                    onClick={handleOpenAddSongsModal}
+                    disabled={(service.worshipSet?.setSongs?.length ?? 0) >= 6}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Songs
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -621,60 +626,89 @@ export default function ServiceDetailPage() {
               <div className="space-y-3">
                 {service.worshipSet.setSongs
                   .sort((a, b) => a.position - b.position)
-                  .map((setSong, index, sortedSongs) => (
-                    <div key={setSong.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                      <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">{setSong.songVersion.song.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          by {setSong.songVersion.song.artist}
-                          {setSong.songVersion.defaultKey && ` • Key: ${setSong.songVersion.defaultKey}`}
+                  .map((setSong, index, sortedSongs) => {
+                    const displayKey = setSong.keyOverride || setSong.songVersion.defaultKey
+                    return (
+                      <div key={setSong.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
+                          {index + 1}
                         </div>
-                      </div>
-                      {canManageWorshipSet && (
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleReorderSong(setSong.id, 'up')}
-                            disabled={index === 0}
-                            className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleReorderSong(setSong.id, 'down')}
-                            disabled={index === sortedSongs.length - 1}
-                            className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSongToRemove({ id: setSong.id, title: setSong.songVersion.song.title })}
-                            className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium">{setSong.songVersion.song.title}</div>
+                          <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+                            <span>by {setSong.songVersion.song.artist}</span>
+                            {displayKey && (
+                              <Badge variant="outline" className="text-xs font-mono">
+                                <Music2 className="h-3 w-3 mr-1" />
+                                {displayKey}
+                              </Badge>
+                            )}
+                            {setSong.singer && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Mic2 className="h-3 w-3 mr-1" />
+                                {setSong.singer.name}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {canManageWorshipSet && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingSong(setSong)}
+                              className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                              title="Edit singer & key"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReorderSong(setSong.id, 'up')}
+                              disabled={index === 0}
+                              className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReorderSong(setSong.id, 'down')}
+                              disabled={index === sortedSongs.length - 1}
+                              className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSongToRemove({ id: setSong.id, title: setSong.songVersion.song.title })}
+                              className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Music className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No songs added to worship set</p>
-                <p className="text-sm">Add songs to get started</p>
-                <Button className="mt-4" onClick={handleOpenAddSongsModal}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Songs
-                </Button>
+                {canManageWorshipSet ? (
+                  <>
+                    <p className="text-sm">Add songs to get started</p>
+                    <Button className="mt-4" onClick={handleOpenAddSongsModal}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Songs
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm">Songs will appear here once added by the worship set leader</p>
+                )}
               </div>
             )}
           </CardContent>
@@ -689,10 +723,19 @@ export default function ServiceDetailPage() {
               <Users className="h-5 w-5" />
               Team Assignments
             </CardTitle>
-            <Button asChild>
+            <Button asChild variant={canManageWorshipSet ? "default" : "outline"}>
               <Link href={`/services/${serviceId}/assignments`}>
-                <Settings className="mr-2 h-4 w-4" />
-                Manage Assignments
+                {canManageWorshipSet ? (
+                  <>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Manage Assignments
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Assignments
+                  </>
+                )}
               </Link>
             </Button>
           </div>
@@ -721,12 +764,18 @@ export default function ServiceDetailPage() {
             <div className="text-center py-8 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No team members assigned</p>
-              <p className="text-sm">Assign musicians to get started</p>
-              <Button asChild className="mt-4" variant="outline">
-                <Link href={`/services/${serviceId}/assignments`}>
-                  Assign Musicians
-                </Link>
-              </Button>
+              {canManageWorshipSet ? (
+                <>
+                  <p className="text-sm">Assign musicians to get started</p>
+                  <Button asChild className="mt-4" variant="outline">
+                    <Link href={`/services/${serviceId}/assignments`}>
+                      Assign Musicians
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm">Musicians will appear here once assigned</p>
+              )}
             </div>
           )}
         </CardContent>
@@ -736,8 +785,8 @@ export default function ServiceDetailPage() {
       {service.worshipSet && (
         <SuggestedSongs
           worshipSetId={service.worshipSet.id}
-          onAddToSet={handleAddSuggestionToSet}
-          onReject={handleRejectSuggestion}
+          onAddToSet={canManageWorshipSet ? handleAddSuggestionToSet : undefined}
+          onReject={canManageWorshipSet ? handleRejectSuggestion : undefined}
         />
       )}
 
@@ -882,6 +931,20 @@ export default function ServiceDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Set Song Modal */}
+      <EditSetSongModal
+        open={!!editingSong}
+        onOpenChange={(open) => !open && setEditingSong(null)}
+        setSong={editingSong}
+        onSave={() => {
+          fetchService()
+          toast({
+            title: 'Success',
+            description: 'Song updated successfully',
+          })
+        }}
+      />
     </div>
   )
 }

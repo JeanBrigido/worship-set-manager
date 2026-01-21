@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const token = await generateJwtToken()
     const body = await request.json()
 
-    const response = await fetch(`${API_BASE}/song-versions`, {
+    const response = await fetch(`${API_BASE}/api/song-versions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

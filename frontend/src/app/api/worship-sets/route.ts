@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
     // If serviceId is provided, get worship set for that service
     // Backend route is GET /worship-sets/:serviceId
     const url = serviceId
-      ? `${API_BASE}/worship-sets/${serviceId}`
-      : `${API_BASE}/worship-sets`
+      ? `${API_BASE}/api/worship-sets/${serviceId}`
+      : `${API_BASE}/api/worship-sets`
 
     const response = await fetch(url, {
       headers: {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const token = await generateJwtToken()
     const body = await request.json()
 
-    const response = await fetch(`${API_BASE}/worship-sets`, {
+    const response = await fetch(`${API_BASE}/api/worship-sets`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

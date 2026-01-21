@@ -18,9 +18,9 @@ export function useLeaderRotations() {
   return useQuery({
     queryKey: leaderRotationKeys.list(),
     queryFn: async () => {
-      const response = await apiClient.get<{ data: LeaderRotation[] }>('/leader-rotations')
+      const response = await apiClient.get<LeaderRotation[]>('/leader-rotations')
       if (response.error) throw new Error(response.error.message)
-      return response.data?.data || []
+      return response.data || []
     },
   })
 }
@@ -30,9 +30,9 @@ export function useLeaderRotationsByServiceType(serviceTypeId: string) {
   return useQuery({
     queryKey: leaderRotationKeys.byServiceType(serviceTypeId),
     queryFn: async () => {
-      const response = await apiClient.get<{ data: LeaderRotation[] }>(`/leader-rotations/by-service-type/${serviceTypeId}`)
+      const response = await apiClient.get<LeaderRotation[]>(`/leader-rotations/by-service-type/${serviceTypeId}`)
       if (response.error) throw new Error(response.error.message)
-      return response.data?.data || []
+      return response.data || []
     },
     enabled: !!serviceTypeId,
   })
@@ -43,9 +43,9 @@ export function useNextLeader(serviceTypeId: string) {
   return useQuery({
     queryKey: leaderRotationKeys.nextLeader(serviceTypeId),
     queryFn: async () => {
-      const response = await apiClient.get<{ data: LeaderRotation }>(`/leader-rotations/next/${serviceTypeId}`)
+      const response = await apiClient.get<LeaderRotation>(`/leader-rotations/next/${serviceTypeId}`)
       if (response.error) throw new Error(response.error.message)
-      return response.data?.data
+      return response.data
     },
     enabled: !!serviceTypeId,
   })
@@ -57,9 +57,9 @@ export function useCreateLeaderRotation() {
 
   return useMutation({
     mutationFn: async (input: CreateLeaderRotationInput) => {
-      const response = await apiClient.post<{ data: LeaderRotation }>('/leader-rotations', input)
+      const response = await apiClient.post<LeaderRotation>('/leader-rotations', input)
       if (response.error) throw new Error(response.error.message)
-      return response.data?.data
+      return response.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leaderRotationKeys.lists() })
@@ -73,9 +73,9 @@ export function useUpdateLeaderRotation() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateLeaderRotationInput }) => {
-      const response = await apiClient.put<{ data: LeaderRotation }>(`/leader-rotations/${id}`, data)
+      const response = await apiClient.put<LeaderRotation>(`/leader-rotations/${id}`, data)
       if (response.error) throw new Error(response.error.message)
-      return response.data?.data
+      return response.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leaderRotationKeys.lists() })
@@ -99,6 +99,51 @@ export function useDeleteLeaderRotation() {
   })
 }
 
+// Reorder leader rotations with optimistic updates
+export function useReorderLeaderRotations() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ serviceTypeId, rotationIds }: { serviceTypeId: string; rotationIds: string[] }) => {
+      const response = await apiClient.put<LeaderRotation[]>('/leader-rotations/reorder', { serviceTypeId, rotationIds })
+      if (response.error) throw new Error(response.error.message)
+      return response.data
+    },
+    onMutate: async ({ rotationIds }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: leaderRotationKeys.lists() })
+
+      // Snapshot the previous value
+      const previousRotations = queryClient.getQueryData<LeaderRotation[]>(leaderRotationKeys.list())
+
+      // Optimistically update the cache
+      if (previousRotations) {
+        const updatedRotations = previousRotations.map(rotation => {
+          const newIndex = rotationIds.indexOf(rotation.id)
+          if (newIndex !== -1) {
+            return { ...rotation, rotationOrder: newIndex + 1 }
+          }
+          return rotation
+        })
+        queryClient.setQueryData(leaderRotationKeys.list(), updatedRotations)
+      }
+
+      // Return context with the previous value
+      return { previousRotations }
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback to previous value on error
+      if (context?.previousRotations) {
+        queryClient.setQueryData(leaderRotationKeys.list(), context.previousRotations)
+      }
+    },
+    onSettled: () => {
+      // Refetch after error or success to ensure cache is in sync
+      queryClient.invalidateQueries({ queryKey: leaderRotationKeys.lists() })
+    },
+  })
+}
+
 // Assign leader to worship set
 export function useAssignLeader() {
   const queryClient = useQueryClient()
@@ -107,7 +152,7 @@ export function useAssignLeader() {
     mutationFn: async ({ worshipSetId, leaderUserId }: { worshipSetId: string; leaderUserId: string | null }) => {
       const response = await apiClient.put(`/worship-sets/${worshipSetId}/assign-leader`, { leaderUserId })
       if (response.error) throw new Error(response.error.message)
-      return response.data?.data
+      return response.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['worship-sets'] })
@@ -121,9 +166,9 @@ export function useSuggestedLeader(worshipSetId: string) {
   return useQuery({
     queryKey: ['worship-sets', worshipSetId, 'suggested-leader'],
     queryFn: async () => {
-      const response = await apiClient.get<{ data: LeaderRotation }>(`/worship-sets/${worshipSetId}/suggested-leader`)
+      const response = await apiClient.get<LeaderRotation>(`/worship-sets/${worshipSetId}/suggested-leader`)
       if (response.error) throw new Error(response.error.message)
-      return response.data?.data
+      return response.data
     },
     enabled: !!worshipSetId,
   })

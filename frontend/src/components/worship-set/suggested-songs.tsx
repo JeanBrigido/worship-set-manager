@@ -125,25 +125,31 @@ export function SuggestedSongs({ worshipSetId, onAddToSet, onReject }: Suggested
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2 ml-4">
-                    <Button
-                      size="sm"
-                      onClick={() => handleAddClick(suggestion)}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add to Set
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleReject(suggestion.id)}
-                      className="gap-2"
-                    >
-                      <X className="h-4 w-4" />
-                      Reject
-                    </Button>
-                  </div>
+                  {(onAddToSet || onReject) && (
+                    <div className="flex gap-2 ml-4">
+                      {onAddToSet && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddClick(suggestion)}
+                          className="gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add to Set
+                        </Button>
+                      )}
+                      {onReject && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReject(suggestion.id)}
+                          className="gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Reject
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

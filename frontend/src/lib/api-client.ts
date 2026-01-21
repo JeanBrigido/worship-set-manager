@@ -81,7 +81,14 @@ export class ApiClient {
         }
       }
 
-      const jsonResponse = await response.json()
+      // Handle 204 No Content (common for DELETE requests)
+      if (response.status === 204) {
+        return { data: undefined }
+      }
+
+      // Try to parse JSON response
+      const text = await response.text()
+      const jsonResponse = text ? JSON.parse(text) : {}
 
       if (!response.ok) {
         return {

@@ -3,35 +3,39 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /// ///////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////
 model User {
-  id                 String              @id @default(uuid())
-  email              String              @unique
-  password           String?
-  name               String
-  phoneE164          String?
-  roles              Role[]
-  isActive           Boolean             @default(true)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  emailVerified      DateTime?
-  image              String?
-  accounts           Account[]
-  assignments        Assignment[]
-  availability       Availability[]
-  defaultAssignments DefaultAssignment[]
-  notifications      NotificationLog[]
-  servicesLed        Service[]           @relation("LeaderServices")
-  sessions           Session[]
-  suggestionSlots    SuggestionSlot[]
-  leaderRotations    LeaderRotation[]
-  worshipSetsLed     WorshipSet[]        @relation("WorshipSetLeader")
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String?
+  name                String
+  phoneE164           String?
+  roles               Role[]
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  emailVerified       DateTime?
+  image               String?
+  accounts            Account[]
+  assignments         Assignment[]
+  availability        Availability[]
+  defaultAssignments  DefaultAssignment[]
+  leaderRotations     LeaderRotation[]
+  notifications       NotificationLog[]
   passwordResetTokens PasswordResetToken[]
+  servicesLed         Service[]            @relation("LeaderServices")
+  sessions            Session[]
+  setSongsAsSinger    SetSong[]            @relation("SetSongSinger")
+  singerSongKeys      SingerSongKey[]      @relation("SingerKeys")
+  suggestionSlots     SuggestionSlot[]
+  userInstruments     UserInstrument[]
+  worshipSetsLed      WorshipSet[]         @relation("WorshipSetLeader")
 }
 
 /// ///////////////////////////////////////////////////
@@ -42,8 +46,8 @@ model ServiceType {
   defaultStartTime   String
   rrule              String?
   defaultAssignments DefaultAssignment[]
-  services           Service[]
   leaderRotations    LeaderRotation[]
+  services           Service[]
 }
 
 model Service {
@@ -52,7 +56,7 @@ model Service {
   serviceDate   DateTime
   leaderId      String?
   status        ServiceStatus @default(planned)
-  leader        User?         @relation("LeaderServices", fields: [leaderId], references: [id], onDelete: SetNull)
+  leader        User?         @relation("LeaderServices", fields: [leaderId], references: [id])
   serviceType   ServiceType   @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
   worshipSet    WorshipSet?
 
@@ -70,24 +74,25 @@ model WorshipSet {
   assignments     Assignment[]
   setSongs        SetSong[]
   suggestionSlots SuggestionSlot[]
+  leaderUser      User?            @relation("WorshipSetLeader", fields: [leaderUserId], references: [id])
   service         Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  leaderUser      User?            @relation("WorshipSetLeader", fields: [leaderUserId], references: [id], onDelete: SetNull)
 }
 
 /// ///////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////
 model Song {
-  id                String        @id @default(uuid())
+  id                String          @id @default(uuid())
   title             String
   artist            String?
   ccliNumber        String?
   defaultYoutubeUrl String?
   tags              String[]
   language          String?
-  familiarityScore  Int           @default(50)
-  isActive          Boolean       @default(true)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  familiarityScore  Int             @default(50)
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  singerSongKeys    SingerSongKey[]
   versions          SongVersion[]
   suggestions       Suggestion[]
 
@@ -115,10 +120,29 @@ model SetSong {
   youtubeUrlOverride String?
   isNew              Boolean     @default(false)
   notes              String?
+  singerId           String?
   worshipSet         WorshipSet  @relation(fields: [setId], references: [id], onDelete: Cascade)
+  singer             User?       @relation("SetSongSinger", fields: [singerId], references: [id])
   songVersion        SongVersion @relation(fields: [songVersionId], references: [id], onDelete: Cascade)
 
   @@unique([setId, position])
+}
+
+/// Tracks which key a singer uses for a particular song (full history)
+model SingerSongKey {
+  id          String   @id @default(uuid())
+  singerId    String
+  songId      String
+  key         String
+  serviceDate DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  singer      User     @relation("SingerKeys", fields: [singerId], references: [id], onDelete: Cascade)
+  song        Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@index([singerId, songId])
+  @@index([singerId])
+  @@index([songId])
 }
 
 /// ///////////////////////////////////////////////////
@@ -142,8 +166,8 @@ model Suggestion {
   songId             String
   youtubeUrlOverride String?
   notes              String?
-  status             SuggestionStatus @default(pending)
   createdAt          DateTime         @default(now())
+  status             SuggestionStatus @default(pending)
   suggestionSlot     SuggestionSlot   @relation(fields: [slotId], references: [id], onDelete: Cascade)
   song               Song             @relation(fields: [songId], references: [id], onDelete: Cascade)
 }
@@ -157,6 +181,23 @@ model Instrument {
   maxPerSet          Int
   assignments        Assignment[]
   defaultAssignments DefaultAssignment[]
+  userInstruments    UserInstrument[]
+}
+
+model UserInstrument {
+  id               String       @id @default(uuid())
+  userId           String
+  instrumentId     String
+  proficiencyLevel Proficiency?
+  isPrimary        Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  instrument       Instrument   @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, instrumentId])
+  @@index([userId])
+  @@index([instrumentId])
 }
 
 model DefaultAssignment {
@@ -207,8 +248,8 @@ model LeaderRotation {
   isActive      Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([serviceTypeId, rotationOrder])
   @@index([serviceTypeId, isActive])
@@ -310,6 +351,12 @@ enum AssignmentStatus {
   accepted
   declined
   withdrawn
+}
+
+enum Proficiency {
+  beginner
+  intermediate
+  advanced
 }
 
 enum Channel {

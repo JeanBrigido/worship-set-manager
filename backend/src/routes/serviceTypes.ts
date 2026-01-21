@@ -26,4 +26,7 @@ router.put("/:id", authMiddleware, requireRole([Role.admin]), serviceTypesContro
 // Admin only: delete
 router.delete("/:id", authMiddleware, requireRole([Role.admin]), serviceTypesController.deleteServiceType);
 
+// Admin only: generate services for the year
+router.post("/:id/generate-services", authMiddleware, requireRole([Role.admin]), serviceTypesController.generateServices);
+
 export default router;

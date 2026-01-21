@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const token = await generateJwtToken();
 
-    const response = await fetch(`${API_BASE}/suggestion-slots/my-assignments`, {
+    const response = await fetch(`${API_BASE}/api/suggestion-slots/my-assignments`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',

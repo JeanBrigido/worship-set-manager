@@ -20,7 +20,7 @@ export async function PUT(
     const body = await request.json();
 
     const response = await fetch(
-      `${API_BASE}/suggestion-slots/${params.id}/assign-user`,
+      `${API_BASE}/api/suggestion-slots/${params.id}/assign-user`,
       {
         method: 'PUT',
         headers: {

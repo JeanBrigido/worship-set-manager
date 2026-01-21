@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { ArrowLeft, Plus, Edit, Trash2, Guitar, Settings } from 'lucide-react'
 import Link from 'next/link'
+import { apiClient } from '@/lib/api-client'
 
 interface Instrument {
   id: string
@@ -25,12 +26,11 @@ interface Instrument {
 }
 
 async function fetchInstruments(): Promise<Instrument[]> {
-  const response = await fetch('/api/instruments')
-  if (!response.ok) {
-    throw new Error('Failed to fetch instruments')
+  const { data, error } = await apiClient.get<Instrument[]>('/instruments')
+  if (error) {
+    throw new Error(error.message)
   }
-  const result = await response.json()
-  return result.data || result || []
+  return data || []
 }
 
 export default function InstrumentsPage() {
@@ -63,7 +63,7 @@ export default function InstrumentsPage() {
   const { data: instruments = [], isLoading: instrumentsLoading } = useQuery({
     queryKey: ['instruments'],
     queryFn: fetchInstruments,
-    enabled: isAdmin,
+    enabled: !!session && isAdmin === true,
   })
 
   const openAddDialog = () => {
@@ -115,19 +115,12 @@ export default function InstrumentsPage() {
         maxPerSet,
       }
 
-      const url = editingInstrument
-        ? `/api/instruments/${editingInstrument.id}`
-        : '/api/instruments'
+      const { error } = editingInstrument
+        ? await apiClient.put(`/instruments/${editingInstrument.id}`, payload)
+        : await apiClient.post('/instruments', payload)
 
-      const response = await fetch(url, {
-        method: editingInstrument ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to save instrument')
+      if (error) {
+        throw new Error(error.message || 'Failed to save instrument')
       }
 
       toast({
@@ -154,13 +147,10 @@ export default function InstrumentsPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`/api/instruments/${instrumentToDelete.id}`, {
-        method: 'DELETE',
-      })
+      const { error } = await apiClient.delete(`/instruments/${instrumentToDelete.id}`)
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to delete instrument')
+      if (error) {
+        throw new Error(error.message || 'Failed to delete instrument')
       }
 
       toast({

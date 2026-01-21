@@ -144,9 +144,33 @@ export const listUsers = async (req: Request & { user?: JwtPayload }, res: Respo
       where.isActive = isActiveParam === 'true';
     }
 
+    // Filter by instrument capability
+    const instrumentIdParam = req.query.instrumentId as string;
+    if (instrumentIdParam) {
+      where.userInstruments = {
+        some: { instrumentId: instrumentIdParam }
+      };
+    }
+
+    // Check if we should include instruments in response
+    const includeInstruments = req.query.includeInstruments === 'true';
+
     const users = await prisma.user.findMany({
       where,
       orderBy: { name: 'asc' },
+      include: includeInstruments ? {
+        userInstruments: {
+          include: {
+            instrument: {
+              select: {
+                id: true,
+                code: true,
+                displayName: true,
+              }
+            }
+          }
+        }
+      } : undefined,
     });
 
     res.json({
@@ -158,6 +182,13 @@ export const listUsers = async (req: Request & { user?: JwtPayload }, res: Respo
         isActive: u.isActive,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
+        ...(includeInstruments && 'userInstruments' in u ? {
+          instruments: (u as any).userInstruments.map((ui: any) => ({
+            id: ui.instrument.id,
+            code: ui.instrument.code,
+            displayName: ui.instrument.displayName,
+          }))
+        } : {}),
       }))
     });
   } catch (err) {

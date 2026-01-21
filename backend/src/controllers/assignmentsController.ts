@@ -22,7 +22,11 @@ export const listAssignments = async (req: Request & { user?: JwtPayload }, res:
         user: true,
         worshipSet: {
           include: {
-            service: true
+            service: {
+              include: {
+                serviceType: true
+              }
+            }
           }
         }
       },

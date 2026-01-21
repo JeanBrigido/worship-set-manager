@@ -98,6 +98,20 @@ export function Header() {
                               </Link>
                             </NavigationMenuLink>
                           )}
+                          {isAdmin && (
+                            <NavigationMenuLink asChild>
+                              <Link
+                                href="/admin/service-types"
+                                className="flex items-center space-x-2 p-3 rounded-md hover:bg-accent"
+                              >
+                                <Settings className="h-4 w-4" />
+                                <div>
+                                  <div className="text-sm font-medium">Service Types</div>
+                                  <div className="text-xs text-muted-foreground">Manage recurring service templates</div>
+                                </div>
+                              </Link>
+                            </NavigationMenuLink>
+                          )}
                         </div>
                       </NavigationMenuContent>
                     </NavigationMenuItem>
@@ -303,6 +317,16 @@ export function Header() {
                             <Calendar className="h-4 w-4" />
                             Create Service
                           </Link>
+                          {isAdmin && (
+                            <Link
+                              href="/admin/service-types"
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
+                            >
+                              <Settings className="h-4 w-4" />
+                              Service Types
+                            </Link>
+                          )}
                         </>
                       )}
 

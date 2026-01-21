@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
 
     // If setId is provided, get assignments for that set
     const url = setId
-      ? `${API_BASE}/assignments/set/${setId}`
-      : `${API_BASE}/assignments`
+      ? `${API_BASE}/api/assignments/set/${setId}`
+      : `${API_BASE}/api/assignments`
 
     const response = await fetch(url, {
       headers: {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const token = await generateJwtToken()
     const body = await request.json()
 
-    const response = await fetch(`${API_BASE}/assignments`, {
+    const response = await fetch(`${API_BASE}/api/assignments`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -15,7 +15,12 @@ export async function GET(request: NextRequest) {
 
     const token = await generateJwtToken()
 
-    const response = await fetch(`${API_BASE}/users`, {
+    // Forward query parameters to the backend
+    const { searchParams } = new URL(request.url)
+    const queryString = searchParams.toString()
+    const url = queryString ? `${API_BASE}/api/users?${queryString}` : `${API_BASE}/api/users`
+
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -53,7 +58,7 @@ export async function POST(request: NextRequest) {
     const token = await generateJwtToken()
     const body = await request.json()
 
-    const response = await fetch(`${API_BASE}/users`, {
+    const response = await fetch(`${API_BASE}/api/users`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

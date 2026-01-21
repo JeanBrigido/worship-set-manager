@@ -16,7 +16,10 @@ export const listSetSongs = async (req: Request & { user?: JwtPayload }, res: Re
     const songs = await prisma.setSong.findMany({
       where: { setId },
       orderBy: { position: "asc" },
-      include: { songVersion: { include: { song: true } } },
+      include: {
+        songVersion: { include: { song: true } },
+        singer: { select: { id: true, name: true } },
+      },
     });
     res.json({ data: songs });
   } catch (err) {
@@ -33,7 +36,10 @@ export const getSetSong = async (req: Request & { user?: JwtPayload }, res: Resp
     const { id } = req.params;
     const song = await prisma.setSong.findUnique({
       where: { id },
-      include: { songVersion: { include: { song: true } } },
+      include: {
+        songVersion: { include: { song: true } },
+        singer: { select: { id: true, name: true } },
+      },
     });
     if (!song) return res.status(404).json({ error: { message: "Set song not found" } });
     res.json({ data: song });
@@ -52,7 +58,7 @@ export const createSetSong = async (req: Request & { user?: JwtPayload }, res: R
       return res.status(403).json({ error: { message: "Forbidden" } });
     }
 
-    const { setId, songVersionId, position, keyOverride, youtubeUrlOverride, isNew, notes } = req.body;
+    const { setId, songVersionId, position, keyOverride, youtubeUrlOverride, isNew, notes, singerId } = req.body;
 
     // Auto-determine isNew based on song's familiarity score if not explicitly provided
     let shouldBeNew = isNew;
@@ -80,6 +86,11 @@ export const createSetSong = async (req: Request & { user?: JwtPayload }, res: R
         youtubeUrlOverride,
         isNew: shouldBeNew,
         notes,
+        singerId,
+      },
+      include: {
+        songVersion: { include: { song: true } },
+        singer: { select: { id: true, name: true } },
       },
     });
 
@@ -100,11 +111,15 @@ export const updateSetSong = async (req: Request & { user?: JwtPayload }, res: R
     }
 
     const { id } = req.params;
-    const { position, keyOverride, youtubeUrlOverride, isNew, notes } = req.body;
+    const { position, keyOverride, youtubeUrlOverride, isNew, notes, singerId } = req.body;
 
     const updated = await prisma.setSong.update({
       where: { id },
-      data: { position, keyOverride, youtubeUrlOverride, isNew, notes },
+      data: { position, keyOverride, youtubeUrlOverride, isNew, notes, singerId },
+      include: {
+        songVersion: { include: { song: true } },
+        singer: { select: { id: true, name: true } },
+      },
     });
 
     res.json({ data: updated });
@@ -215,7 +230,10 @@ export const reorderSetSongs = async (req: Request & { user?: JwtPayload }, res:
     const reorderedSongs = await prisma.setSong.findMany({
       where: { setId },
       orderBy: { position: "asc" },
-      include: { songVersion: { include: { song: true } } }
+      include: {
+        songVersion: { include: { song: true } },
+        singer: { select: { id: true, name: true } },
+      },
     });
 
     res.json({ data: reorderedSongs });

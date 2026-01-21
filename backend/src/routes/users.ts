@@ -2,6 +2,8 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import * as usersController from "../controllers/usersController";
 import * as authController from "../controllers/authController";
+import * as userInstrumentsController from "../controllers/userInstrumentsController";
+import * as singerSongKeysController from "../controllers/singerSongKeysController";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { requireRole } from "../middleware/requireRole";
 import { validateRequest } from "../middleware/validateRequest";
@@ -74,6 +76,22 @@ router.get("/me", authMiddleware, usersController.getMe);
 // Admin only: list all users
 router.get("/", authMiddleware, requireRole([Role.admin]), usersController.listUsers);
 
+// Get user's playable instruments (Self/Admin) - must be before /:id
+router.get(
+  "/:id/instruments",
+  authMiddleware,
+  validateUuid('id'),
+  userInstrumentsController.getUserInstruments
+);
+
+// Get user's song key profile (all songs and keys history) - must be before /:id
+router.get(
+  "/:id/key-profile",
+  authMiddleware,
+  validateUuid('id'),
+  singerSongKeysController.getUserKeyProfile
+);
+
 // Get user profile (Self/Admin - controller handles authorization logic)
 router.get("/:id", authMiddleware, validateUuid('id'), usersController.getUser);
 
@@ -122,6 +140,14 @@ router.patch(
   requireRole([Role.admin]),
   validateRequest("updateUserRolesSchema"),
   usersController.updateUserRoles
+);
+
+// Update user's playable instruments (Self/Admin)
+router.put(
+  "/:id/instruments",
+  authMiddleware,
+  validateUuid('id'),
+  userInstrumentsController.updateUserInstruments
 );
 
 export default router;

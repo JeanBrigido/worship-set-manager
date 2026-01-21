@@ -63,10 +63,11 @@ function ResetPasswordForm() {
       const result = await response.json()
 
       if (!response.ok) {
-        if (result.error?.includes('expired') || result.error?.includes('Invalid')) {
+        const errorMessage = result.error?.message || result.error || 'Failed to reset password'
+        if (typeof errorMessage === 'string' && (errorMessage.includes('expired') || errorMessage.includes('Invalid'))) {
           setTokenValid(false)
         }
-        throw new Error(result.error || 'Failed to reset password')
+        throw new Error(errorMessage)
       }
 
       setSuccess(true)

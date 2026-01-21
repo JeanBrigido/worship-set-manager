@@ -18,7 +18,7 @@ export async function GET(
 
     const token = await generateJwtToken()
 
-    const response = await fetch(`${API_BASE}/services/${params.id}/assignments`, {
+    const response = await fetch(`${API_BASE}/api/services/${params.id}/assignments`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ export async function PUT(
     const token = await generateJwtToken()
     const body = await request.json()
 
-    const response = await fetch(`${API_BASE}/services/${params.id}/assignments`, {
+    const response = await fetch(`${API_BASE}/api/services/${params.id}/assignments`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -18,7 +18,7 @@ export async function GET(
 
     const token = await generateJwtToken()
 
-    const response = await fetch(`${API_BASE}/worship-sets/${params.id}`, {
+    const response = await fetch(`${API_BASE}/api/worship-sets/${params.id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ export async function PUT(
     const token = await generateJwtToken()
     const body = await request.json()
 
-    const response = await fetch(`${API_BASE}/worship-sets/${params.id}`, {
+    const response = await fetch(`${API_BASE}/api/worship-sets/${params.id}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -101,7 +101,7 @@ export async function DELETE(
 
     const token = await generateJwtToken()
 
-    const response = await fetch(`${API_BASE}/worship-sets/${params.id}`, {
+    const response = await fetch(`${API_BASE}/api/worship-sets/${params.id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,

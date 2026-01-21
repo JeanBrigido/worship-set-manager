@@ -8,6 +8,45 @@ interface JwtPayload {
 }
 
 /**
+ * Helper: Capture singer-song-keys when a worship set is published
+ * For each song with both a singer assigned AND a keyOverride,
+ * create a SingerSongKey record to track the key history.
+ */
+async function captureSingerSongKeys(setId: string, serviceDate: Date): Promise<void> {
+  // Get all set songs with singer and key info
+  const setSongs = await prisma.setSong.findMany({
+    where: { setId },
+    include: {
+      songVersion: { select: { songId: true } },
+    },
+  });
+
+  // Filter to songs that have both singer and key assigned
+  const songsToCapture = setSongs.filter(
+    (setSong) => setSong.singerId && setSong.keyOverride
+  );
+
+  if (songsToCapture.length === 0) return;
+
+  // Create singer-song-key records (skip if already exists for same singer/song/date)
+  for (const setSong of songsToCapture) {
+    try {
+      await prisma.singerSongKey.create({
+        data: {
+          singerId: setSong.singerId!,
+          songId: setSong.songVersion.songId,
+          key: setSong.keyOverride!,
+          serviceDate,
+        },
+      });
+    } catch (err: any) {
+      // If there's a duplicate or other error, log but don't fail the publish
+      console.log(`Note: Could not capture key for singer ${setSong.singerId}, song ${setSong.songVersion.songId}:`, err.message);
+    }
+  }
+}
+
+/**
  * GET /worshipSets
  * List all worship sets
  */
@@ -168,7 +207,7 @@ export const updateWorshipSet = async (req: Request & { user?: JwtPayload }, res
     // Check if set exists and get current status
     const existingSet = await prisma.worshipSet.findUnique({
       where: { id },
-      include: { setSongs: true }
+      include: { setSongs: true, service: true }
     });
 
     if (!existingSet) {
@@ -210,6 +249,11 @@ export const updateWorshipSet = async (req: Request & { user?: JwtPayload }, res
         notes,
       },
     });
+
+    // Auto-capture singer-song-keys when publishing
+    if (status === 'published') {
+      await captureSingerSongKeys(id, existingSet.service.serviceDate);
+    }
 
     res.json({ data: updated });
   } catch (err) {

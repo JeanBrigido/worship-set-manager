@@ -45,11 +45,12 @@ export default function ForgotPasswordPage() {
 
       if (!response.ok) {
         const result = await response.json()
-        if (result.error?.includes('Too many')) {
+        const errorMessage = result.error?.message || result.error || 'Failed to send reset email'
+        if (typeof errorMessage === 'string' && errorMessage.includes('Too many')) {
           setError('Too many attempts. Please try again later.')
           return
         }
-        throw new Error(result.error || 'Failed to send reset email')
+        throw new Error(errorMessage)
       }
 
       setSuccess(true)

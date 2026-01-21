@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const token = await generateJwtToken()
 
-    const response = await fetch(`${API_BASE}/instruments`, {
+    const response = await fetch(`${API_BASE}/api/instruments`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const token = await generateJwtToken()
     const body = await request.json()
 
-    const response = await fetch(`${API_BASE}/instruments`, {
+    const response = await fetch(`${API_BASE}/api/instruments`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -54,6 +54,7 @@ const routes = [
   { path: "/api/suggestions", file: "./routes/suggestions", name: "Suggestions" },
   { path: "/api/suggestion-slots", file: "./routes/suggestionSlots", name: "Suggestion Slots" },
   { path: "/api/default-assignments", file: "./routes/defaultAssignments", name: "Default Assignments" },
+  { path: "/api/singer-song-keys", file: "./routes/singerSongKeys", name: "Singer Song Keys" },
 ];
 
 routes.forEach(({ path, file, name }) => {

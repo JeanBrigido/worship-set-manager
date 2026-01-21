@@ -25,14 +25,19 @@ interface User {
   email: string
 }
 
+interface WorshipSet {
+  id: string
+  leaderUserId?: string
+  leaderUser?: User
+}
+
 interface Service {
   id: string
   serviceDate: string
   status: 'planned' | 'published' | 'cancelled'
   serviceTypeId: string
-  leaderId?: string
   serviceType: ServiceType
-  leader?: User
+  worshipSet?: WorshipSet
 }
 
 export default function EditServicePage() {
@@ -50,7 +55,7 @@ export default function EditServicePage() {
   const [formData, setFormData] = useState({
     serviceDate: '',
     serviceTypeId: '',
-    leaderId: '',
+    worshipSetLeaderId: '',
     status: 'planned' as 'planned' | 'published' | 'cancelled'
   })
 
@@ -72,11 +77,11 @@ export default function EditServicePage() {
       if (serviceResult.data) {
         setService(serviceResult.data)
 
-        // Set form data
+        // Set form data - use worshipSet.leaderUserId for the worship set leader
         setFormData({
           serviceDate: serviceResult.data.serviceDate.split('T')[0], // Format date for input
           serviceTypeId: serviceResult.data.serviceTypeId,
-          leaderId: serviceResult.data.leaderId || 'no-leader',
+          worshipSetLeaderId: serviceResult.data.worshipSet?.leaderUserId || 'no-leader',
           status: serviceResult.data.status
         })
       }
@@ -129,7 +134,7 @@ export default function EditServicePage() {
       const { data, error } = await apiClient.put(`/services/${serviceId}`, {
         serviceDate: new Date(formData.serviceDate).toISOString(),
         serviceTypeId: formData.serviceTypeId,
-        leaderId: formData.leaderId === "no-leader" ? undefined : formData.leaderId || undefined,
+        worshipSetLeaderId: formData.worshipSetLeaderId === "no-leader" ? null : formData.worshipSetLeaderId || null,
         status: formData.status
       })
 
@@ -252,10 +257,10 @@ export default function EditServicePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="leaderId">Service Leader</Label>
+                <Label htmlFor="worshipSetLeaderId">Leader</Label>
                 <Select
-                  value={formData.leaderId}
-                  onValueChange={(value) => handleInputChange('leaderId', value)}
+                  value={formData.worshipSetLeaderId}
+                  onValueChange={(value) => handleInputChange('worshipSetLeaderId', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select leader (optional)" />
