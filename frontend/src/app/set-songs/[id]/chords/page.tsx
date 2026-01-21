@@ -33,28 +33,28 @@ export default function ChordViewerPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const fetchChordSheet = async () => {
+      try {
+        setLoading(true)
+        const { data, error } = await apiClient.get<TransposedChordSheet>(
+          `/set-songs/${setSongId}/chord-sheet`
+        )
+
+        if (error) {
+          setError(error.message)
+          return
+        }
+
+        setChordSheet(data ?? null)
+      } catch (err) {
+        setError('Could not load chord sheet')
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchChordSheet()
   }, [setSongId])
-
-  const fetchChordSheet = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await apiClient.get<TransposedChordSheet>(
-        `/set-songs/${setSongId}/chord-sheet`
-      )
-
-      if (error) {
-        setError(error.message)
-        return
-      }
-
-      setChordSheet(data ?? null)
-    } catch (err) {
-      setError('Could not load chord sheet')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -136,7 +136,7 @@ export default function ChordViewerPage() {
             ) : (
               <img
                 src={chordSheet.fileUrl}
-                alt="Chord sheet"
+                alt={`Chord sheet for ${chordSheet.songTitle}`}
                 className="max-w-full mx-auto rounded"
               />
             )}
