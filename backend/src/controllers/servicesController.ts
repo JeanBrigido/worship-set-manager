@@ -111,7 +111,8 @@ export const getService = async (req: Request & { user?: JwtPayload }, res: Resp
               include: {
                 songVersion: {
                   include: {
-                    song: true
+                    song: true,
+                    chordSheet: { select: { id: true } },
                   }
                 },
                 singer: {

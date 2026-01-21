@@ -91,7 +91,8 @@ export const getWorshipSet = async (req: Request & { user?: JwtPayload }, res: R
           include: {
             songVersion: {
               include: {
-                song: true
+                song: true,
+                chordSheet: { select: { id: true } },
               }
             }
           },
