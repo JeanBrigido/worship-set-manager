@@ -44,22 +44,29 @@ interface SongVersionWithSong extends SongVersion {
 export default function ChordSheetEditPage() {
   const params = useParams()
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
 
   const songId = params.id as string
   const versionId = params.versionId as string
 
   const [songVersion, setSongVersion] = useState<SongVersionWithSong | null>(null)
+  const [chordSheet, setChordSheet] = useState<ChordSheet | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const isAdminOrLeader = session?.user?.roles?.some(
     (r: string) => r === 'admin' || r === 'leader'
   )
 
   useEffect(() => {
-    const fetchSongVersion = async () => {
+    // Wait for session to load and check authorization
+    if (status === 'loading') return
+    if (!isAdminOrLeader) return
+
+    const fetchData = async () => {
       try {
         setLoading(true)
+        setError(null)
 
         // Fetch song version and song data in parallel
         const [versionResult, songResult] = await Promise.all([
@@ -68,12 +75,12 @@ export default function ChordSheetEditPage() {
         ])
 
         if (versionResult.error || !versionResult.data) {
-          console.error('Failed to fetch song version:', versionResult.error)
+          setError(versionResult.error?.message || 'Song version not found')
           return
         }
 
         if (songResult.error || !songResult.data) {
-          console.error('Failed to fetch song:', songResult.error)
+          setError(songResult.error?.message || 'Song not found')
           return
         }
 
@@ -85,32 +92,56 @@ export default function ChordSheetEditPage() {
         setSongVersion({
           ...versionResult.data,
           song: songResult.data,
-          chordSheet: chordSheetResult.data || null,
         })
+        setChordSheet(chordSheetResult.data || null)
       } catch (err) {
-        console.error('Error fetching data:', err)
+        setError('Failed to load data')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchSongVersion()
-  }, [versionId, songId])
+    fetchData()
+  }, [versionId, songId, status, isAdminOrLeader])
 
   const handleRefresh = async () => {
-    // Refetch chord sheet data
-    const chordSheetResult = await apiClient.get<ChordSheet>(
+    const { data } = await apiClient.get<ChordSheet>(
       `/song-versions/${versionId}/chord-sheet`
     )
-
-    if (songVersion) {
-      setSongVersion({
-        ...songVersion,
-        chordSheet: chordSheetResult.data || null,
-      })
-    }
+    setChordSheet(data || null)
   }
 
+  // Session still loading
+  if (status === 'loading') {
+    return (
+      <div className="container max-w-4xl py-8 space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    )
+  }
+
+  // Not authorized
+  if (!isAdminOrLeader) {
+    return (
+      <div className="container max-w-4xl py-8">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              You do not have permission to edit chord sheets
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Data loading
   if (loading) {
     return (
       <div className="container max-w-4xl py-8 space-y-4">
@@ -121,26 +152,21 @@ export default function ChordSheetEditPage() {
     )
   }
 
-  if (!songVersion) {
+  // Error or not found
+  if (error || !songVersion) {
     return (
       <div className="container max-w-4xl py-8">
         <Button variant="ghost" onClick={() => router.back()} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <p>Song version not found</p>
-      </div>
-    )
-  }
-
-  if (!isAdminOrLeader) {
-    return (
-      <div className="container max-w-4xl py-8">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <p>You do not have permission to edit chord sheets</p>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              {error || 'Song version not found'}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -163,9 +189,9 @@ export default function ChordSheetEditPage() {
         <CardContent>
           <ChordSheetEditor
             songVersionId={versionId}
-            initialData={songVersion.chordSheet}
-            onSave={() => handleRefresh()}
-            onDelete={() => handleRefresh()}
+            initialData={chordSheet}
+            onSave={handleRefresh}
+            onDelete={handleRefresh}
           />
         </CardContent>
       </Card>
