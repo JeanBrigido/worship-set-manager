@@ -106,8 +106,8 @@ export const deleteChordSheet = async (req: Request & { user?: JwtPayload }, res
     }
 
     // Delete file from storage if exists
-    if (existing.fileUrl) {
-      const filePath = `chord-sheets/${id}/${existing.fileName}`;
+    if (existing.fileUrl && existing.fileName) {
+      const filePath = `${id}/${existing.fileName}`;
       await supabase.storage.from("chord-sheets").remove([filePath]);
     }
 
@@ -163,13 +163,16 @@ export const uploadChordSheetFile = async (req: RequestWithFile, res: Response) 
       where: { songVersionId: id },
     });
 
-    if (existing?.fileUrl) {
-      const oldPath = `chord-sheets/${id}/${existing.fileName}`;
+    if (existing?.fileUrl && existing?.fileName) {
+      const oldPath = `${id}/${existing.fileName}`;
       await supabase.storage.from("chord-sheets").remove([oldPath]);
     }
 
+    // Sanitize filename to prevent path traversal
+    const safeFileName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+
     // Upload new file
-    const filePath = `chord-sheets/${id}/${file.originalname}`;
+    const filePath = `${id}/${safeFileName}`;
     const { error: uploadError } = await supabase.storage
       .from("chord-sheets")
       .upload(filePath, file.buffer, {
@@ -190,8 +193,8 @@ export const uploadChordSheetFile = async (req: RequestWithFile, res: Response) 
     // Upsert chord sheet record
     const chordSheet = await prisma.chordSheet.upsert({
       where: { songVersionId: id },
-      update: { fileUrl: urlData.publicUrl, fileName: file.originalname },
-      create: { songVersionId: id, fileUrl: urlData.publicUrl, fileName: file.originalname },
+      update: { fileUrl: urlData.publicUrl, fileName: safeFileName },
+      create: { songVersionId: id, fileUrl: urlData.publicUrl, fileName: safeFileName },
     });
 
     res.json({ data: chordSheet });
@@ -280,7 +283,9 @@ function transposeChordText(text: string, fromKey: string, toKey: string): strin
   if (fromIdx === -1 || toIdx === -1) return text;
 
   const semitones = (toIdx - fromIdx + 12) % 12;
-  const useFlats = toKey.includes("b") || ["F", "Bb", "Eb", "Ab", "Db", "Gb"].includes(toKey);
+  // Extract root note for flat key detection (handles minor keys like "Dm", "Fm")
+  const rootNote = toKey.replace(/m.*$/, '');
+  const useFlats = toKey.includes("b") || ["F", "Bb", "Eb", "Ab", "Db", "Gb"].includes(rootNote);
 
   // Match chord patterns in brackets: [Am7], [C#], [Gmaj7], etc.
   return text.replace(/\[([A-G][#b]?)([^\]]*)\]/g, (match, root, suffix) => {
