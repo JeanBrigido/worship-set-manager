@@ -528,7 +528,8 @@ export const getSongProgress = async (req: Request & { user?: JwtPayload }, res:
               include: {
                 songVersion: {
                   include: {
-                    song: true
+                    song: true,
+                    chordSheet: { select: { id: true } },
                   }
                 },
                 singer: {
@@ -561,7 +562,8 @@ export const getSongProgress = async (req: Request & { user?: JwtPayload }, res:
           include: {
             songVersion: {
               include: {
-                song: true
+                song: true,
+                chordSheet: { select: { id: true } },
               }
             },
             singer: {
@@ -623,6 +625,7 @@ export const getSongProgress = async (req: Request & { user?: JwtPayload }, res:
             id: setSong.songVersion.id,
             name: setSong.songVersion.name,
             youtubeUrl: setSong.songVersion.youtubeUrl,
+            chordSheet: setSong.songVersion.chordSheet,
           },
           song: {
             id: setSong.songVersion.song.id,

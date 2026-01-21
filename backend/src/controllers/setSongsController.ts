@@ -17,7 +17,12 @@ export const listSetSongs = async (req: Request & { user?: JwtPayload }, res: Re
       where: { setId },
       orderBy: { position: "asc" },
       include: {
-        songVersion: { include: { song: true } },
+        songVersion: {
+          include: {
+            song: true,
+            chordSheet: { select: { id: true } },
+          },
+        },
         singer: { select: { id: true, name: true } },
       },
     });
@@ -37,7 +42,12 @@ export const getSetSong = async (req: Request & { user?: JwtPayload }, res: Resp
     const song = await prisma.setSong.findUnique({
       where: { id },
       include: {
-        songVersion: { include: { song: true } },
+        songVersion: {
+          include: {
+            song: true,
+            chordSheet: { select: { id: true } },
+          },
+        },
         singer: { select: { id: true, name: true } },
       },
     });
@@ -89,7 +99,12 @@ export const createSetSong = async (req: Request & { user?: JwtPayload }, res: R
         singerId,
       },
       include: {
-        songVersion: { include: { song: true } },
+        songVersion: {
+          include: {
+            song: true,
+            chordSheet: { select: { id: true } },
+          },
+        },
         singer: { select: { id: true, name: true } },
       },
     });
@@ -117,7 +132,12 @@ export const updateSetSong = async (req: Request & { user?: JwtPayload }, res: R
       where: { id },
       data: { position, keyOverride, youtubeUrlOverride, isNew, notes, singerId },
       include: {
-        songVersion: { include: { song: true } },
+        songVersion: {
+          include: {
+            song: true,
+            chordSheet: { select: { id: true } },
+          },
+        },
         singer: { select: { id: true, name: true } },
       },
     });
@@ -231,7 +251,12 @@ export const reorderSetSongs = async (req: Request & { user?: JwtPayload }, res:
       where: { setId },
       orderBy: { position: "asc" },
       include: {
-        songVersion: { include: { song: true } },
+        songVersion: {
+          include: {
+            song: true,
+            chordSheet: { select: { id: true } },
+          },
+        },
         singer: { select: { id: true, name: true } },
       },
     });
