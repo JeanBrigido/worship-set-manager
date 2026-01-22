@@ -615,40 +615,78 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-2">
-              {upcomingServices.map((service) => (
-                <Link
-                  key={service.id}
-                  href={`/services/${service.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{service.serviceType.name}</span>
-                        {service.worshipSet?.leaderUser && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Crown className="h-3 w-3 text-amber-500" />
-                            {service.worshipSet.leaderUser.name}
-                          </span>
+              {upcomingServices.map((service) => {
+                // Find user's assignment for this service
+                const myAssignment = assignments.find(
+                  a => a.worshipSet.service.id === service.id && a.status === 'accepted'
+                )
+                const isLeading = service.worshipSet?.leaderUserId === userId
+
+                return (
+                  <Link
+                    key={service.id}
+                    href={`/services/${service.id}`}
+                    className={`flex items-center justify-between p-3 rounded-lg transition-colors group ${
+                      isLeading
+                        ? 'bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/50 dark:hover:bg-amber-900/30 border border-amber-200/50 dark:border-amber-800/30'
+                        : myAssignment
+                        ? 'bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100/50 dark:hover:bg-green-900/30 border border-green-200/50 dark:border-green-800/30'
+                        : 'bg-muted/30 hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                        isLeading
+                          ? 'bg-amber-100 dark:bg-amber-900/30'
+                          : myAssignment
+                          ? 'bg-green-100 dark:bg-green-900/30'
+                          : 'bg-primary/10'
+                      }`}>
+                        {isLeading ? (
+                          <Crown className="h-5 w-5 text-amber-600" />
+                        ) : myAssignment ? (
+                          <Guitar className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Calendar className="h-5 w-5 text-primary" />
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {formatServiceDate(service.serviceDate)} at {service.serviceType.defaultStartTime}
-                      </p>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{service.serviceType.name}</span>
+                          {isLeading && (
+                            <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 bg-amber-100/50 dark:bg-amber-900/30">
+                              <Crown className="h-3 w-3 mr-1" />
+                              Leading
+                            </Badge>
+                          )}
+                          {myAssignment && (
+                            <Badge variant="outline" className="text-xs border-green-400 text-green-600 bg-green-100/50 dark:bg-green-900/30">
+                              <Guitar className="h-3 w-3 mr-1" />
+                              {myAssignment.instrument.displayName}
+                            </Badge>
+                          )}
+                          {!isLeading && !myAssignment && service.worshipSet?.leaderUser && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Crown className="h-3 w-3 text-amber-500" />
+                              {service.worshipSet.leaderUser.name}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {formatServiceDate(service.serviceDate)} at {service.serviceType.defaultStartTime}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-right text-xs text-muted-foreground hidden sm:block">
-                      <div>{service.worshipSet?._count?.setSongs || 0} songs</div>
-                      <div>{service.worshipSet?.assignments?.filter(a => a.status === 'accepted').length || 0} confirmed</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right text-xs text-muted-foreground hidden sm:block">
+                        <div>{service.worshipSet?._count?.setSongs || 0} songs</div>
+                        <div>{service.worshipSet?.assignments?.filter(a => a.status === 'accepted').length || 0} confirmed</div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
             </div>
           )}
         </CardContent>

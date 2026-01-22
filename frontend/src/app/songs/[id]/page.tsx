@@ -13,7 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Edit, Trash2, ArrowLeft, Plus, Music } from 'lucide-react'
+import { Edit, Trash2, ArrowLeft, Plus, Music, FileMusic, FilePlus2 } from 'lucide-react'
+import Link from 'next/link'
 import { useToast } from '@/hooks/use-toast'
 import { apiClient } from '@/lib/api-client'
 
@@ -24,6 +25,9 @@ interface SongVersion {
   bpm?: number
   youtubeUrl?: string
   notes?: string
+  chordSheet?: {
+    id: string
+  } | null
 }
 
 interface Song {
@@ -377,11 +381,26 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
                       )}
                     </div>
                     <div className="flex gap-1 ml-2">
+                      <Link href={`/songs/${params.id}/versions/${version.id}/chord-sheet`}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                          title={version.chordSheet ? 'Edit Chords' : 'Add Chords'}
+                        >
+                          {version.chordSheet ? (
+                            <FileMusic className="h-4 w-4" />
+                          ) : (
+                            <FilePlus2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </Link>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openEditVersionDialog(version)}
                         className="h-8 w-8 p-0"
+                        title="Edit Version"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -390,6 +409,7 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
                         size="sm"
                         onClick={() => setVersionToDelete(version)}
                         className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        title="Delete Version"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

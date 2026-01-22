@@ -73,7 +73,15 @@ export const getSong = async (req: Request & { user?: JwtPayload }, res: Respons
     const { id } = req.params;
     const song = await prisma.song.findUnique({
       where: { id },
-      include: { versions: true },
+      include: {
+        versions: {
+          include: {
+            chordSheet: {
+              select: { id: true },
+            },
+          },
+        },
+      },
     });
     if (!song) return res.status(404).json({ error: { message: "Song not found" } });
     res.json({ data: song });
