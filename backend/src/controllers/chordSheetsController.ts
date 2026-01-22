@@ -8,24 +8,28 @@ interface JwtPayload {
   roles: Role[];
 }
 
-interface MulterFile {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  buffer: Buffer;
-}
-
-interface RequestWithFile extends Request {
+// Use intersection type to add user property without conflicting with Express.Multer.File
+type RequestWithFile = Request & {
   user?: JwtPayload;
-  file?: MulterFile;
-}
+  file?: Express.Multer.File;
+};
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_KEY || ""
-);
+// Lazy initialization of Supabase client to avoid errors when env vars aren't set
+let supabase: ReturnType<typeof createClient> | null = null;
+
+const getSupabaseClient = () => {
+  if (!supabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!url || !key) {
+      throw new Error("Supabase configuration missing. Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables.");
+    }
+
+    supabase = createClient(url, key);
+  }
+  return supabase;
+};
 
 /**
  * GET /song-versions/:id/chord-sheet
@@ -108,7 +112,7 @@ export const deleteChordSheet = async (req: Request & { user?: JwtPayload }, res
     // Delete file from storage if exists
     if (existing.fileUrl && existing.fileName) {
       const filePath = `${id}/${existing.fileName}`;
-      await supabase.storage.from("chord-sheets").remove([filePath]);
+      await getSupabaseClient().storage.from("chord-sheets").remove([filePath]);
     }
 
     await prisma.chordSheet.delete({
@@ -165,7 +169,7 @@ export const uploadChordSheetFile = async (req: RequestWithFile, res: Response) 
 
     if (existing?.fileUrl && existing?.fileName) {
       const oldPath = `${id}/${existing.fileName}`;
-      await supabase.storage.from("chord-sheets").remove([oldPath]);
+      await getSupabaseClient().storage.from("chord-sheets").remove([oldPath]);
     }
 
     // Sanitize filename to prevent path traversal
@@ -173,7 +177,7 @@ export const uploadChordSheetFile = async (req: RequestWithFile, res: Response) 
 
     // Upload new file
     const filePath = `${id}/${safeFileName}`;
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await getSupabaseClient().storage
       .from("chord-sheets")
       .upload(filePath, file.buffer, {
         contentType: file.mimetype,
@@ -186,7 +190,7 @@ export const uploadChordSheetFile = async (req: RequestWithFile, res: Response) 
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = getSupabaseClient().storage
       .from("chord-sheets")
       .getPublicUrl(filePath);
 

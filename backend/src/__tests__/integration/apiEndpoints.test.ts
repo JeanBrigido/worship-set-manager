@@ -15,6 +15,9 @@ app.use('/services', servicesRouter);
 app.use('/assignments', assignmentsRouter);
 
 describe('API Endpoints Integration Tests', () => {
+  // Track test-created service IDs for safe cleanup
+  const createdServiceIds: string[] = [];
+
   describe('GET /songs', () => {
     it('should list all songs', async () => {
       const response = await request(app)
@@ -120,17 +123,8 @@ describe('API Endpoints Integration Tests', () => {
     });
 
     afterEach(async () => {
-      // Clean up created services - need to delete WorshipSets first due to foreign key
-      const servicesToDelete = await prisma.service.findMany({
-        where: {
-          serviceDate: {
-            gte: new Date('2025-01-01'),
-          },
-        },
-        select: { id: true },
-      });
-
-      const serviceIds = servicesToDelete.map(s => s.id);
+      // Only clean up services created during this test run
+      if (createdServiceIds.length === 0) return;
 
       // Delete in order respecting foreign key constraints
       // 1. Delete suggestions first
@@ -138,7 +132,7 @@ describe('API Endpoints Integration Tests', () => {
         where: {
           suggestionSlot: {
             worshipSet: {
-              serviceId: { in: serviceIds },
+              serviceId: { in: createdServiceIds },
             },
           },
         },
@@ -148,7 +142,7 @@ describe('API Endpoints Integration Tests', () => {
       await prisma.suggestionSlot.deleteMany({
         where: {
           worshipSet: {
-            serviceId: { in: serviceIds },
+            serviceId: { in: createdServiceIds },
           },
         },
       });
@@ -157,7 +151,7 @@ describe('API Endpoints Integration Tests', () => {
       await prisma.setSong.deleteMany({
         where: {
           worshipSet: {
-            serviceId: { in: serviceIds },
+            serviceId: { in: createdServiceIds },
           },
         },
       });
@@ -166,7 +160,7 @@ describe('API Endpoints Integration Tests', () => {
       await prisma.assignment.deleteMany({
         where: {
           worshipSet: {
-            serviceId: { in: serviceIds },
+            serviceId: { in: createdServiceIds },
           },
         },
       });
@@ -174,16 +168,19 @@ describe('API Endpoints Integration Tests', () => {
       // 5. Delete worship sets
       await prisma.worshipSet.deleteMany({
         where: {
-          serviceId: { in: serviceIds },
+          serviceId: { in: createdServiceIds },
         },
       });
 
       // 6. Finally delete services
       await prisma.service.deleteMany({
         where: {
-          id: { in: serviceIds },
+          id: { in: createdServiceIds },
         },
       });
+
+      // Clear the array for next test
+      createdServiceIds.length = 0;
     });
 
     it('should create a service with valid data (admin)', async () => {
@@ -202,6 +199,9 @@ describe('API Endpoints Integration Tests', () => {
 
       expect(response.body.data).toHaveProperty('id');
       expect(response.body.data.serviceTypeId).toBe(serviceType.id);
+
+      // Track for cleanup
+      createdServiceIds.push(response.body.data.id);
     });
 
     it('should create a service with valid data (leader)', async () => {
@@ -219,6 +219,9 @@ describe('API Endpoints Integration Tests', () => {
         .expect(201);
 
       expect(response.body.data).toHaveProperty('id');
+
+      // Track for cleanup
+      createdServiceIds.push(response.body.data.id);
     });
 
     it('should reject service creation by musician', async () => {
