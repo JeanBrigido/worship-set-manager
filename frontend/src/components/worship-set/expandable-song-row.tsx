@@ -17,6 +17,7 @@ import {
   Check,
   Circle,
   FileMusic,
+  FilePlus2,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -221,6 +222,28 @@ export function ExpandableSongRow({
                   >
                     <FileMusic className="h-4 w-4 mr-1" />
                     View Chords
+                  </Button>
+                </Link>
+              )}
+
+              {canManage && (
+                <Link href={`/songs/${setSong.songVersion.song.id}/versions/${setSong.songVersion.id}/chord-sheet`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800"
+                  >
+                    {setSong.songVersion.chordSheet ? (
+                      <>
+                        <FileMusic className="h-4 w-4 mr-1" />
+                        Edit Chords
+                      </>
+                    ) : (
+                      <>
+                        <FilePlus2 className="h-4 w-4 mr-1" />
+                        Add Chords
+                      </>
+                    )}
                   </Button>
                 </Link>
               )}
