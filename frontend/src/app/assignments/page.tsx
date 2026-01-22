@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Users, Plus, Calendar, Music, UserCheck, UserX, Clock, Trash2 } from 'lucide-react'
+import { Users, Calendar, Music, UserCheck, UserX, Clock, Trash2 } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 
 interface Assignment {
@@ -151,24 +150,14 @@ export default function AssignmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <PageHeader
-          title={isAdmin ? "Team Assignments" : "My Assignments"}
-          description={
-            isAdmin
-              ? "View and manage worship team assignments"
-              : "View your upcoming worship service assignments"
-          }
-        />
-        {isAdmin && (
-          <Button asChild>
-            <Link href="/assignments/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Assignment
-            </Link>
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={isAdmin ? "Team Assignments" : "My Assignments"}
+        description={
+          isAdmin
+            ? "View all worship team assignments"
+            : "View your upcoming worship service assignments"
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -193,7 +182,7 @@ export default function AssignmentsPage() {
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No assignments found</p>
               {isAdmin && (
-                <p className="text-sm">Create your first assignment to get started</p>
+                <p className="text-sm">Assignments are created from the service management page</p>
               )}
             </div>
           ) : (
