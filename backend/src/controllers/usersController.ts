@@ -15,7 +15,9 @@ interface JwtPayload {
  */
 export const signup = async (req: Request, res: Response) => {
   try {
-    const { email, password, name, phoneE164, roles } = req.body;
+    const { email, password, name, phoneE164 } = req.body;
+    // Note: roles intentionally not accepted from request body to prevent privilege escalation
+    // New users are always assigned the 'musician' role by default
 
     const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
@@ -25,7 +27,7 @@ export const signup = async (req: Request, res: Response) => {
         password: hashedPassword,
         name,
         phoneE164,
-        roles,
+        roles: [Role.musician], // Default role - admins must manually elevate privileges
       },
     });
 
