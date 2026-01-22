@@ -8,7 +8,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env.test') });
 
 // Mock environment variables for testing (override if not in .env.test)
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-key-for-testing-only';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-key-for-testing-only-32';
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
 
 // For tests, use DATABASE_URL from .env.test or default to in-memory/mock
