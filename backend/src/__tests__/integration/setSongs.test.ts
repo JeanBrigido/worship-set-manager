@@ -1,5 +1,6 @@
 import request from 'supertest';
 import express from 'express';
+import { randomUUID } from 'crypto';
 import setSongsRouter from '../../routes/setSongs';
 import prisma from '../../prisma';
 import { adminToken, leaderToken, musicianToken } from '../fixtures/authHelpers';
@@ -16,12 +17,14 @@ describe('Set Songs API', () => {
   let testService: any;
   let testServiceType: any;
   let testSetSong: any;
+  const testUniqueId = randomUUID().slice(0, 8);
 
   beforeAll(async () => {
-    // Create test service type
+    // Create test service type with unique name
     testServiceType = await prisma.serviceType.create({
       data: {
-        name: 'Test Service Type for SetSongs',
+        id: randomUUID(),
+        name: `Test Service Type for SetSongs ${testUniqueId}`,
         defaultStartTime: '09:00',
       },
     });
@@ -65,30 +68,30 @@ describe('Set Songs API', () => {
     if (testWorshipSet) {
       await prisma.setSong.deleteMany({
         where: { setId: testWorshipSet.id },
-      });
+      }).catch(() => {});
       await prisma.worshipSet.delete({
         where: { id: testWorshipSet.id },
-      });
+      }).catch(() => {});
     }
     if (testService) {
       await prisma.service.delete({
         where: { id: testService.id },
-      });
+      }).catch(() => {});
     }
     if (testServiceType) {
       await prisma.serviceType.delete({
         where: { id: testServiceType.id },
-      });
+      }).catch(() => {});
     }
     if (testVersion) {
       await prisma.songVersion.delete({
         where: { id: testVersion.id },
-      });
+      }).catch(() => {});
     }
     if (testSong) {
       await prisma.song.delete({
         where: { id: testSong.id },
-      });
+      }).catch(() => {});
     }
   });
 

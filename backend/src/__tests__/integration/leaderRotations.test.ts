@@ -1,5 +1,6 @@
 import request from 'supertest';
 import express from 'express';
+import { randomUUID } from 'crypto';
 import { Role } from '@prisma/client';
 import leaderRotationsRouter from '../../routes/leaderRotations';
 import prisma from '../../prisma';
@@ -15,70 +16,76 @@ describe('Leader Rotations Integration Tests', () => {
   let testLeaderUser: any;
   let testLeaderUser2: any;
   let testMusicianUser: any;
-  const testId = Date.now().toString();
 
   beforeAll(async () => {
-    // Create test service type
+    // Create test service type with proper UUID
     testServiceType = await prisma.serviceType.create({
       data: {
-        id: `test-service-type-rotation-${testId}`,
-        name: `Test Sunday Service ${testId}`,
+        id: randomUUID(),
+        name: `Test Sunday Service ${randomUUID()}`,
         defaultStartTime: '09:00',
       },
     });
 
-    // Create test users with leader role
+    // Create test users with leader role using proper UUIDs
     testLeaderUser = await prisma.user.create({
       data: {
-        id: `test-leader-rotation-1-${testId}`,
-        email: `leader1.rotation.${testId}@test.com`,
-        name: `Test Leader 1 ${testId}`,
+        id: randomUUID(),
+        email: `leader1.rotation.${randomUUID()}@test.com`,
+        name: 'Test Leader 1',
         roles: [Role.leader],
       },
     });
 
     testLeaderUser2 = await prisma.user.create({
       data: {
-        id: `test-leader-rotation-2-${testId}`,
-        email: `leader2.rotation.${testId}@test.com`,
-        name: `Test Leader 2 ${testId}`,
+        id: randomUUID(),
+        email: `leader2.rotation.${randomUUID()}@test.com`,
+        name: 'Test Leader 2',
         roles: [Role.leader],
       },
     });
 
     testMusicianUser = await prisma.user.create({
       data: {
-        id: `test-musician-rotation-1-${testId}`,
-        email: `musician.rotation.${testId}@test.com`,
-        name: `Test Musician ${testId}`,
+        id: randomUUID(),
+        email: `musician.rotation.${randomUUID()}@test.com`,
+        name: 'Test Musician',
         roles: [Role.musician],
       },
     });
   });
 
   afterAll(async () => {
-    // Cleanup
+    // Cleanup all test data
     await prisma.leaderRotation.deleteMany({
-      where: {
-        OR: [
-          { userId: testLeaderUser.id },
-          { userId: testLeaderUser2.id },
-        ],
-      },
+      where: { serviceTypeId: testServiceType?.id },
     });
-    await prisma.user.deleteMany({
-      where: {
-        id: { in: [testLeaderUser.id, testLeaderUser2.id, testMusicianUser.id] },
-      },
-    });
-    await prisma.serviceType.delete({ where: { id: testServiceType.id } });
+    if (testLeaderUser?.id && testLeaderUser2?.id && testMusicianUser?.id) {
+      await prisma.user.deleteMany({
+        where: {
+          id: { in: [testLeaderUser.id, testLeaderUser2.id, testMusicianUser.id] },
+        },
+      });
+    }
+    if (testServiceType?.id) {
+      await prisma.serviceType.delete({ where: { id: testServiceType.id } }).catch(() => {});
+    }
   });
+
+  // Helper to clean up rotations before each test block
+  const cleanupRotations = async () => {
+    await prisma.leaderRotation.deleteMany({
+      where: { serviceTypeId: testServiceType.id },
+    });
+  };
 
   describe('GET /leader-rotations', () => {
     let rotation1: any;
     let rotation2: any;
 
     beforeEach(async () => {
+      await cleanupRotations();
       rotation1 = await prisma.leaderRotation.create({
         data: {
           userId: testLeaderUser.id,
@@ -97,9 +104,7 @@ describe('Leader Rotations Integration Tests', () => {
     });
 
     afterEach(async () => {
-      await prisma.leaderRotation.deleteMany({
-        where: { id: { in: [rotation1.id, rotation2.id] } },
-      });
+      await cleanupRotations();
     });
 
     it('should list all rotations with authentication', async () => {
@@ -126,10 +131,12 @@ describe('Leader Rotations Integration Tests', () => {
   });
 
   describe('POST /leader-rotations', () => {
+    beforeEach(async () => {
+      await cleanupRotations();
+    });
+
     afterEach(async () => {
-      await prisma.leaderRotation.deleteMany({
-        where: { serviceTypeId: testServiceType.id },
-      });
+      await cleanupRotations();
     });
 
     it('should create rotation with admin role', async () => {
@@ -205,6 +212,7 @@ describe('Leader Rotations Integration Tests', () => {
     let rotation: any;
 
     beforeEach(async () => {
+      await cleanupRotations();
       rotation = await prisma.leaderRotation.create({
         data: {
           userId: testLeaderUser.id,
@@ -215,9 +223,7 @@ describe('Leader Rotations Integration Tests', () => {
     });
 
     afterEach(async () => {
-      await prisma.leaderRotation.deleteMany({
-        where: { id: rotation.id },
-      });
+      await cleanupRotations();
     });
 
     it('should update rotation order with admin role', async () => {
@@ -269,6 +275,7 @@ describe('Leader Rotations Integration Tests', () => {
     let rotation: any;
 
     beforeEach(async () => {
+      await cleanupRotations();
       rotation = await prisma.leaderRotation.create({
         data: {
           userId: testLeaderUser.id,
@@ -279,9 +286,7 @@ describe('Leader Rotations Integration Tests', () => {
     });
 
     afterEach(async () => {
-      await prisma.leaderRotation.deleteMany({
-        where: { id: rotation.id },
-      });
+      await cleanupRotations();
     });
 
     it('should soft delete rotation with admin role', async () => {
@@ -320,6 +325,9 @@ describe('Leader Rotations Integration Tests', () => {
     let testWorshipSet: any;
 
     beforeEach(async () => {
+      // Clean up any existing rotations and related data first
+      await cleanupRotations();
+
       // Create rotation entries
       rotation1 = await prisma.leaderRotation.create({
         data: {
@@ -339,11 +347,11 @@ describe('Leader Rotations Integration Tests', () => {
     });
 
     afterEach(async () => {
-      if (testWorshipSet) await prisma.worshipSet.delete({ where: { id: testWorshipSet.id } });
-      if (testService) await prisma.service.delete({ where: { id: testService.id } });
-      await prisma.leaderRotation.deleteMany({
-        where: { id: { in: [rotation1.id, rotation2.id, rotation3?.id].filter(Boolean) } },
-      });
+      if (testWorshipSet) await prisma.worshipSet.delete({ where: { id: testWorshipSet.id } }).catch(() => {});
+      if (testService) await prisma.service.delete({ where: { id: testService.id } }).catch(() => {});
+      await cleanupRotations();
+      testWorshipSet = null;
+      testService = null;
     });
 
     it('should return first rotation when no previous services', async () => {
@@ -360,7 +368,6 @@ describe('Leader Rotations Integration Tests', () => {
       // Create a service with first leader assigned
       testService = await prisma.service.create({
         data: {
-          id: `test-service-next-leader-1-${testId}`,
           serviceTypeId: testServiceType.id,
           serviceDate: new Date('2025-01-01'),
         },
@@ -387,7 +394,6 @@ describe('Leader Rotations Integration Tests', () => {
       // Create a service with second (last) leader assigned
       testService = await prisma.service.create({
         data: {
-          id: `test-service-next-leader-2-${testId}`,
           serviceTypeId: testServiceType.id,
           serviceDate: new Date('2025-01-01'),
         },
@@ -413,8 +419,7 @@ describe('Leader Rotations Integration Tests', () => {
     it('should return 404 when no rotations exist for service type', async () => {
       const emptyServiceType = await prisma.serviceType.create({
         data: {
-          id: `empty-service-type-${testId}`,
-          name: `Empty Service Type ${testId}`,
+          name: `Empty Service Type ${randomUUID()}`,
           defaultStartTime: '10:00',
         },
       });
@@ -449,6 +454,8 @@ describe('Leader Rotations Integration Tests', () => {
     let rotation2: any;
 
     beforeEach(async () => {
+      await cleanupRotations();
+
       rotation1 = await prisma.leaderRotation.create({
         data: {
           userId: testLeaderUser.id,
@@ -467,9 +474,7 @@ describe('Leader Rotations Integration Tests', () => {
     });
 
     afterEach(async () => {
-      await prisma.leaderRotation.deleteMany({
-        where: { id: { in: [rotation1.id, rotation2.id] } },
-      });
+      await cleanupRotations();
     });
 
     it('should return rotations ordered by rotation order', async () => {

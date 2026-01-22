@@ -25,6 +25,8 @@ import {
   createAssignmentSchema,
   updateAssignmentSchema,
   upsertChordSheetSchema,
+  createAvailabilitySchema,
+  updateAvailabilitySchema,
 } from "../validation";
 
 const schemas: Record<string, any> = {
@@ -52,6 +54,8 @@ const schemas: Record<string, any> = {
   createAssignmentSchema,
   updateAssignmentSchema,
   upsertChordSheetSchema,
+  createAvailabilitySchema,
+  updateAvailabilitySchema,
 };
 
 export const validateRequest = (schemaName: keyof typeof schemas) => {

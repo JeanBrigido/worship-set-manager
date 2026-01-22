@@ -12,7 +12,7 @@ export const validateUuid = (paramName: string = 'id') => {
 
     if (!uuid || !UUID_REGEX.test(uuid)) {
       return res.status(400).json({
-        error: `Invalid UUID format for parameter '${paramName}'`
+        error: { message: `Invalid UUID format for parameter '${paramName}'` }
       });
     }
 

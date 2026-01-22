@@ -22,7 +22,7 @@ describe('API Endpoints Integration Tests', () => {
         .set(adminToken())
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should allow musicians to view songs', async () => {
@@ -31,7 +31,7 @@ describe('API Endpoints Integration Tests', () => {
         .set(musicianToken())
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should require authentication to view songs', async () => {
@@ -48,7 +48,7 @@ describe('API Endpoints Integration Tests', () => {
         .set(adminToken())
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should allow musicians to view services', async () => {
@@ -57,7 +57,7 @@ describe('API Endpoints Integration Tests', () => {
         .set(musicianToken())
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should require authentication to view services', async () => {
@@ -99,8 +99,8 @@ describe('API Endpoints Integration Tests', () => {
         .set(adminToken())
         .expect(200);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.id).toBe(testService.id);
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.id).toBe(testService.id);
     });
 
     it('should return 404 for non-existent service', async () => {
@@ -200,8 +200,8 @@ describe('API Endpoints Integration Tests', () => {
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.serviceTypeId).toBe(serviceType.id);
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.serviceTypeId).toBe(serviceType.id);
     });
 
     it('should create a service with valid data (leader)', async () => {
@@ -218,7 +218,7 @@ describe('API Endpoints Integration Tests', () => {
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
+      expect(response.body.data).toHaveProperty('id');
     });
 
     it('should reject service creation by musician', async () => {
@@ -257,7 +257,7 @@ describe('API Endpoints Integration Tests', () => {
         .set(adminToken())
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should allow musicians to view assignments', async () => {
@@ -266,7 +266,7 @@ describe('API Endpoints Integration Tests', () => {
         .set(musicianToken())
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should require authentication to view assignments', async () => {

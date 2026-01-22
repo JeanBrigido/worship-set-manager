@@ -1,5 +1,6 @@
 import request from 'supertest';
 import express from 'express';
+import { randomUUID } from 'crypto';
 import { Role } from '@prisma/client';
 import suggestionSlotsRouter from '../../routes/suggestionSlots';
 import prisma from '../../prisma';
@@ -17,14 +18,14 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
   let testUser1: any;
   let testUser2: any;
   let testMusicianUser: any;
-  const testId = Date.now().toString();
+  const testUniqueId = randomUUID().slice(0, 8);
 
   beforeAll(async () => {
     // Create test service type
     testServiceType = await prisma.serviceType.create({
       data: {
-        id: `test-service-type-slot-${testId}`,
-        name: `Test Sunday Service Slot ${testId}`,
+        id: randomUUID(),
+        name: `Test Sunday Service Slot ${testUniqueId}`,
         defaultStartTime: '09:00',
       },
     });
@@ -32,27 +33,27 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
     // Create test users
     testUser1 = await prisma.user.create({
       data: {
-        id: `test-user-slot-1-${testId}`,
-        email: `user1.slot.${testId}@test.com`,
-        name: `Test User Slot 1 ${testId}`,
+        id: randomUUID(),
+        email: `user1.slot.${testUniqueId}@test.com`,
+        name: `Test User Slot 1 ${testUniqueId}`,
         roles: [Role.musician],
       },
     });
 
     testUser2 = await prisma.user.create({
       data: {
-        id: `test-user-slot-2-${testId}`,
-        email: `user2.slot.${testId}@test.com`,
-        name: `Test User Slot 2 ${testId}`,
+        id: randomUUID(),
+        email: `user2.slot.${testUniqueId}@test.com`,
+        name: `Test User Slot 2 ${testUniqueId}`,
         roles: [Role.leader],
       },
     });
 
     testMusicianUser = await prisma.user.create({
       data: {
-        id: `test-musician-slot-1-${testId}`,
-        email: `musician.slot.${testId}@test.com`,
-        name: `Test Musician Slot ${testId}`,
+        id: randomUUID(),
+        email: `musician.slot.${testUniqueId}@test.com`,
+        name: `Test Musician Slot ${testUniqueId}`,
         roles: [Role.musician],
       },
     });
@@ -60,7 +61,7 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
     // Create test service and worship set
     testService = await prisma.service.create({
       data: {
-        id: `test-service-slot-1-${testId}`,
+        id: randomUUID(),
         serviceTypeId: testServiceType.id,
         serviceDate: new Date('2025-03-01'),
       },
@@ -68,7 +69,7 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
 
     testWorshipSet = await prisma.worshipSet.create({
       data: {
-        id: `test-worship-set-slot-1-${testId}`,
+        id: randomUUID(),
         serviceId: testService.id,
       },
     });
@@ -76,15 +77,20 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
 
   afterAll(async () => {
     // Cleanup - delete in order to respect foreign key constraints
-    await prisma.suggestionSlot.deleteMany({ where: { setId: testWorshipSet.id } });
-    await prisma.worshipSet.delete({ where: { id: testWorshipSet.id } });
-    await prisma.service.delete({ where: { id: testService.id } });
-    await prisma.user.deleteMany({
-      where: {
-        id: { in: [testUser1.id, testUser2.id, testMusicianUser.id] },
-      },
-    });
-    await prisma.serviceType.delete({ where: { id: testServiceType.id } });
+    if (testWorshipSet?.id) {
+      await prisma.suggestionSlot.deleteMany({ where: { setId: testWorshipSet.id } }).catch(() => {});
+      await prisma.worshipSet.delete({ where: { id: testWorshipSet.id } }).catch(() => {});
+    }
+    if (testService?.id) {
+      await prisma.service.delete({ where: { id: testService.id } }).catch(() => {});
+    }
+    const userIds = [testUser1?.id, testUser2?.id, testMusicianUser?.id].filter(Boolean);
+    if (userIds.length > 0) {
+      await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => {});
+    }
+    if (testServiceType?.id) {
+      await prisma.serviceType.delete({ where: { id: testServiceType.id } }).catch(() => {});
+    }
   });
 
   describe('PUT /suggestion-slots/:id/assign-user', () => {
@@ -204,10 +210,10 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
         })
         .expect(201);
 
-      expect(response.body).toBeDefined();
-      expect(response.body.assignedUserId).toBe(testUser1.id);
-      expect(response.body.minSongs).toBe(2);
-      expect(response.body.maxSongs).toBe(4);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.assignedUserId).toBe(testUser1.id);
+      expect(response.body.data.minSongs).toBe(2);
+      expect(response.body.data.maxSongs).toBe(4);
     });
 
     it('should create suggestion slot with leader role', async () => {
@@ -225,7 +231,7 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
         })
         .expect(201);
 
-      expect(response.body.assignedUserId).toBe(testUser1.id);
+      expect(response.body.data.assignedUserId).toBe(testUser1.id);
     });
 
     it('should reject musician from creating suggestion slots', async () => {
@@ -279,8 +285,8 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
         })
         .expect(200);
 
-      expect(response.body.minSongs).toBe(2);
-      expect(response.body.maxSongs).toBe(5);
+      expect(response.body.data.minSongs).toBe(2);
+      expect(response.body.data.maxSongs).toBe(5);
     });
 
     it('should update suggestion slot status', async () => {
@@ -292,7 +298,7 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
         })
         .expect(200);
 
-      expect(response.body.status).toBe('submitted');
+      expect(response.body.data.status).toBe('submitted');
     });
 
     it('should reject musician from updating suggestion slots', async () => {
@@ -393,8 +399,8 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
         .set(adminToken())
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBe(2);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBe(2);
     });
 
     it('should include assigned user and suggestions in response', async () => {
@@ -403,7 +409,7 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
         .set(adminToken())
         .expect(200);
 
-      const slot = response.body[0];
+      const slot = response.body.data[0];
       expect(slot.assignedUser).toBeDefined();
       expect(slot.suggestions).toBeDefined();
     });
@@ -443,9 +449,9 @@ describe('Suggestion Slot Assignment Integration Tests', () => {
         .set(adminToken())
         .expect(200);
 
-      expect(response.body.id).toBe(suggestionSlot.id);
-      expect(response.body.assignedUser).toBeDefined();
-      expect(response.body.suggestions).toBeDefined();
+      expect(response.body.data.id).toBe(suggestionSlot.id);
+      expect(response.body.data.assignedUser).toBeDefined();
+      expect(response.body.data.suggestions).toBeDefined();
     });
 
     it('should return 404 for non-existent slot', async () => {

@@ -1,12 +1,13 @@
 import request from 'supertest';
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { Role } from '@prisma/client';
 import usersRouter from '../../routes/users';
 import servicesRouter from '../../routes/services';
 import prisma from '../../prisma';
 import { testUsers } from '../fixtures/testData';
-import { adminToken, leaderToken, musicianToken } from '../fixtures/authHelpers';
+import { adminToken, leaderToken, musicianToken, tokenForUser } from '../fixtures/authHelpers';
 
 // Create Express app for testing
 const app = express();
@@ -18,17 +19,16 @@ describe('Authorization & Role-Based Access Control Tests', () => {
   let adminUser: any;
   let leaderUser: any;
   let musicianUser: any;
-  const testId = Date.now().toString() + Math.random().toString(36).substring(7);
 
   beforeEach(async () => {
-    // Create test users with different roles using unique IDs
+    // Create test users with different roles using proper UUIDs
     const adminPassword = await bcrypt.hash(testUsers.admin.password, 10);
     adminUser = await prisma.user.create({
       data: {
-        id: `${testUsers.admin.id}-${testId}`,
-        email: `admin.${testId}@test.com`,
+        id: randomUUID(),
+        email: `admin.${randomUUID()}@test.com`,
         password: adminPassword,
-        name: `${testUsers.admin.name} ${testId}`,
+        name: testUsers.admin.name,
         phoneE164: testUsers.admin.phoneE164,
         roles: [Role.admin],
       },
@@ -37,10 +37,10 @@ describe('Authorization & Role-Based Access Control Tests', () => {
     const leaderPassword = await bcrypt.hash(testUsers.leader.password, 10);
     leaderUser = await prisma.user.create({
       data: {
-        id: `${testUsers.leader.id}-${testId}`,
-        email: `leader.${testId}@test.com`,
+        id: randomUUID(),
+        email: `leader.${randomUUID()}@test.com`,
         password: leaderPassword,
-        name: `${testUsers.leader.name} ${testId}`,
+        name: testUsers.leader.name,
         phoneE164: testUsers.leader.phoneE164,
         roles: [Role.leader],
       },
@@ -49,10 +49,10 @@ describe('Authorization & Role-Based Access Control Tests', () => {
     const musicianPassword = await bcrypt.hash(testUsers.musician.password, 10);
     musicianUser = await prisma.user.create({
       data: {
-        id: `${testUsers.musician.id}-${testId}`,
-        email: `musician.${testId}@test.com`,
+        id: randomUUID(),
+        email: `musician.${randomUUID()}@test.com`,
         password: musicianPassword,
-        name: `${testUsers.musician.name} ${testId}`,
+        name: testUsers.musician.name,
         phoneE164: testUsers.musician.phoneE164,
         roles: [Role.musician],
       },
@@ -85,8 +85,8 @@ describe('Authorization & Role-Based Access Control Tests', () => {
         .set(adminToken())
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
     });
 
     it('should reject leader from listing all users', async () => {
@@ -110,22 +110,23 @@ describe('Authorization & Role-Based Access Control Tests', () => {
     });
 
     it('should allow admin to create a new user', async () => {
+      const uniqueEmail = `admincreated.${randomUUID()}@test.com`;
       const response = await request(app)
         .post('/users')
         .set(adminToken())
         .send({
           name: 'Admin Created User',
-          email: 'admincreated@test.com',
+          email: uniqueEmail,
           password: 'Password123',
           roles: [Role.musician],
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.email).toBe('admincreated@test.com');
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.email).toBe(uniqueEmail);
 
       // Cleanup
-      await prisma.user.delete({ where: { email: 'admincreated@test.com' } });
+      await prisma.user.delete({ where: { email: uniqueEmail } });
     });
 
     it('should reject non-admin from creating users', async () => {
@@ -196,11 +197,11 @@ describe('Authorization & Role-Based Access Control Tests', () => {
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
+      expect(response.body.data).toHaveProperty('id');
 
       // Cleanup - delete WorshipSet first due to foreign key
-      await prisma.worshipSet.deleteMany({ where: { serviceId: response.body.id } });
-      await prisma.service.delete({ where: { id: response.body.id } });
+      await prisma.worshipSet.deleteMany({ where: { serviceId: response.body.data.id } });
+      await prisma.service.delete({ where: { id: response.body.data.id } });
     });
 
     it('should allow leader to create a service', async () => {
@@ -219,11 +220,11 @@ describe('Authorization & Role-Based Access Control Tests', () => {
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
+      expect(response.body.data).toHaveProperty('id');
 
       // Cleanup - delete WorshipSet first due to foreign key
-      await prisma.worshipSet.deleteMany({ where: { serviceId: response.body.id } });
-      await prisma.service.delete({ where: { id: response.body.id } });
+      await prisma.worshipSet.deleteMany({ where: { serviceId: response.body.data.id } });
+      await prisma.service.delete({ where: { id: response.body.data.id } });
     });
 
     it('should reject musician from creating services', async () => {
@@ -250,7 +251,7 @@ describe('Authorization & Role-Based Access Control Tests', () => {
     it('should allow user to view their own profile', async () => {
       const response = await request(app)
         .get(`/users/${musicianUser.id}`)
-        .set(musicianToken())
+        .set(tokenForUser(musicianUser.id, [Role.musician]))
         .expect(200);
 
       expect(response.body.data.id).toBe(musicianUser.id);
@@ -260,7 +261,7 @@ describe('Authorization & Role-Based Access Control Tests', () => {
     it('should reject user from viewing another user profile', async () => {
       const response = await request(app)
         .get(`/users/${adminUser.id}`)
-        .set(musicianToken())
+        .set(tokenForUser(musicianUser.id, [Role.musician]))
         .expect(403);
 
       expect(response.body).toHaveProperty('error');
@@ -270,7 +271,7 @@ describe('Authorization & Role-Based Access Control Tests', () => {
     it('should allow admin to view any user profile', async () => {
       const response = await request(app)
         .get(`/users/${musicianUser.id}`)
-        .set(adminToken())
+        .set(tokenForUser(adminUser.id, [Role.admin]))
         .expect(200);
 
       expect(response.body.data.id).toBe(musicianUser.id);

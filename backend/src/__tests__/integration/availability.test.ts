@@ -1,5 +1,6 @@
 import request from 'supertest';
 import express from 'express';
+import { randomUUID } from 'crypto';
 import availabilityRouter from '../../routes/availability';
 import prisma from '../../prisma';
 import { adminToken, leaderToken, musicianToken, tokenForUser } from '../fixtures/authHelpers';
@@ -12,13 +13,15 @@ app.use('/availability', availabilityRouter);
 describe('Availability API', () => {
   let testUser: any;
   let testAvailability: any;
+  const testUniqueId = randomUUID().slice(0, 8);
 
   beforeAll(async () => {
     // Create test user
     testUser = await prisma.user.create({
       data: {
-        email: 'test-availability@example.com',
-        name: 'Test Availability User',
+        id: randomUUID(),
+        email: `test-availability.${testUniqueId}@example.com`,
+        name: `Test Availability User ${testUniqueId}`,
         roles: ['musician'],
       },
     });
@@ -26,19 +29,19 @@ describe('Availability API', () => {
 
   afterAll(async () => {
     // Clean up test data
-    if (testUser) {
+    if (testUser?.id) {
       await prisma.availability.deleteMany({
         where: { userId: testUser.id },
-      });
+      }).catch(() => {});
       await prisma.user.delete({
         where: { id: testUser.id },
-      });
+      }).catch(() => {});
     }
   });
 
   beforeEach(async () => {
     // Clean up availability records between tests
-    if (testUser) {
+    if (testUser?.id) {
       await prisma.availability.deleteMany({
         where: { userId: testUser.id },
       });
