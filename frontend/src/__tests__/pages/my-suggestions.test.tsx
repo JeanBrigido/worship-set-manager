@@ -1,23 +1,23 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { SessionProvider } from 'next-auth/react'
 import MyAssignmentsPage from '@/app/suggestions/my-assignments/page'
-import { useMyAssignments, useCreateSuggestion } from '@/hooks/use-suggestions'
+import * as suggestionHooks from '@/hooks/use-suggestions'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 // Mock dependencies
-jest.mock('next-auth/react')
-jest.mock('next/navigation')
-jest.mock('@/hooks/use-suggestions')
-jest.mock('@/hooks/use-toast', () => ({
+vi.mock('next/navigation')
+vi.mock('next-auth/react')
+vi.mock('@/hooks/use-suggestions')
+vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
-    toast: jest.fn(),
+    toast: vi.fn(),
   }),
 }))
 
-const mockPush = jest.fn()
-const mockUseRouter = useRouter as jest.Mock
-mockUseRouter.mockReturnValue({ push: mockPush })
+const mockPush = vi.fn()
+vi.mocked(useRouter).mockReturnValue({ push: mockPush } as any)
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -28,27 +28,52 @@ const createWrapper = () => {
   })
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider session={{ user: { id: '1', name: 'Test User', email: 'test@example.com' }, expires: '2099-01-01' }}>
-        {children}
-      </SessionProvider>
+      {children}
     </QueryClientProvider>
   )
 }
 
 describe('My Suggestions Page', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
+
+    // Mock useSession with authenticated user
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        user: {
+          id: 'user-1',
+          name: 'Test User',
+          email: 'test@example.com',
+          roles: ['musician'],
+        },
+        expires: '2099-01-01',
+      },
+      status: 'authenticated',
+      update: vi.fn(),
+    } as any)
+
+    // Set up default mock implementations
+    vi.mocked(suggestionHooks.useMyAssignments).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any)
+
+    vi.mocked(suggestionHooks.useCreateSuggestion).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any)
+
+    vi.mocked(suggestionHooks.useDeleteSuggestion).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any)
   })
 
   it('should display loading state', () => {
-    (useMyAssignments as jest.Mock).mockReturnValue({
+    vi.mocked(suggestionHooks.useMyAssignments).mockReturnValue({
       data: [],
       isLoading: true,
-    })
-    ;(useCreateSuggestion as jest.Mock).mockReturnValue({
-      mutateAsync: jest.fn(),
-      isPending: false,
-    })
+    } as any)
 
     render(<MyAssignmentsPage />, { wrapper: createWrapper() })
 
@@ -56,14 +81,10 @@ describe('My Suggestions Page', () => {
   })
 
   it('should display empty state when no assignments', async () => {
-    (useMyAssignments as jest.Mock).mockReturnValue({
+    vi.mocked(suggestionHooks.useMyAssignments).mockReturnValue({
       data: [],
       isLoading: false,
-    })
-    ;(useCreateSuggestion as jest.Mock).mockReturnValue({
-      mutateAsync: jest.fn(),
-      isPending: false,
-    })
+    } as any)
 
     render(<MyAssignmentsPage />, { wrapper: createWrapper() })
 
@@ -81,7 +102,7 @@ describe('My Suggestions Page', () => {
         id: 'assignment-1',
         minSongs: 1,
         maxSongs: 3,
-        dueAt: new Date('2025-12-31').toISOString(),
+        dueAt: new Date('2027-12-31').toISOString(),
         status: 'pending',
         worshipSet: {
           service: {
@@ -95,20 +116,16 @@ describe('My Suggestions Page', () => {
       },
     ]
 
-    ;(useMyAssignments as jest.Mock).mockReturnValue({
+    vi.mocked(suggestionHooks.useMyAssignments).mockReturnValue({
       data: mockAssignments,
       isLoading: false,
-    })
-    ;(useCreateSuggestion as jest.Mock).mockReturnValue({
-      mutateAsync: jest.fn(),
-      isPending: false,
-    })
+    } as any)
 
     render(<MyAssignmentsPage />, { wrapper: createWrapper() })
 
     await waitFor(() => {
       expect(screen.getByText('Sunday Service')).toBeInTheDocument()
-      expect(screen.getByText(/Dec 31, 2025/)).toBeInTheDocument()
+      expect(screen.getByText(/Dec \d{1,2}, 2027/)).toBeInTheDocument()
       expect(screen.getByText('1 - 3 songs')).toBeInTheDocument()
       expect(screen.getByText('Add First Suggestion')).toBeInTheDocument()
     })
@@ -120,7 +137,7 @@ describe('My Suggestions Page', () => {
         id: 'assignment-1',
         minSongs: 1,
         maxSongs: 3,
-        dueAt: new Date('2025-12-31').toISOString(),
+        dueAt: new Date('2027-12-31').toISOString(),
         status: 'submitted',
         worshipSet: {
           service: {
@@ -143,14 +160,10 @@ describe('My Suggestions Page', () => {
       },
     ]
 
-    ;(useMyAssignments as jest.Mock).mockReturnValue({
+    vi.mocked(suggestionHooks.useMyAssignments).mockReturnValue({
       data: mockAssignments,
       isLoading: false,
-    })
-    ;(useCreateSuggestion as jest.Mock).mockReturnValue({
-      mutateAsync: jest.fn(),
-      isPending: false,
-    })
+    } as any)
 
     render(<MyAssignmentsPage />, { wrapper: createWrapper() })
 
@@ -183,14 +196,10 @@ describe('My Suggestions Page', () => {
       },
     ]
 
-    ;(useMyAssignments as jest.Mock).mockReturnValue({
+    vi.mocked(suggestionHooks.useMyAssignments).mockReturnValue({
       data: mockAssignments,
       isLoading: false,
-    })
-    ;(useCreateSuggestion as jest.Mock).mockReturnValue({
-      mutateAsync: jest.fn(),
-      isPending: false,
-    })
+    } as any)
 
     render(<MyAssignmentsPage />, { wrapper: createWrapper() })
 
@@ -208,7 +217,7 @@ describe('My Suggestions Page', () => {
         id: 'assignment-1',
         minSongs: 1,
         maxSongs: 3,
-        dueAt: new Date('2025-12-31').toISOString(),
+        dueAt: new Date('2027-12-31').toISOString(),
         status: 'pending',
         worshipSet: {
           service: {
@@ -222,14 +231,10 @@ describe('My Suggestions Page', () => {
       },
     ]
 
-    ;(useMyAssignments as jest.Mock).mockReturnValue({
+    vi.mocked(suggestionHooks.useMyAssignments).mockReturnValue({
       data: mockAssignments,
       isLoading: false,
-    })
-    ;(useCreateSuggestion as jest.Mock).mockReturnValue({
-      mutateAsync: jest.fn(),
-      isPending: false,
-    })
+    } as any)
 
     render(<MyAssignmentsPage />, { wrapper: createWrapper() })
 
@@ -250,7 +255,7 @@ describe('My Suggestions Page', () => {
         id: 'assignment-1',
         minSongs: 1,
         maxSongs: 2,
-        dueAt: new Date('2025-12-31').toISOString(),
+        dueAt: new Date('2027-12-31').toISOString(),
         status: 'pending',
         worshipSet: {
           service: {
@@ -273,14 +278,10 @@ describe('My Suggestions Page', () => {
       },
     ]
 
-    ;(useMyAssignments as jest.Mock).mockReturnValue({
+    vi.mocked(suggestionHooks.useMyAssignments).mockReturnValue({
       data: mockAssignments,
       isLoading: false,
-    })
-    ;(useCreateSuggestion as jest.Mock).mockReturnValue({
-      mutateAsync: jest.fn(),
-      isPending: false,
-    })
+    } as any)
 
     render(<MyAssignmentsPage />, { wrapper: createWrapper() })
 

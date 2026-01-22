@@ -1,15 +1,15 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { SessionProvider } from 'next-auth/react'
 import { SuggestedSongs } from '@/components/worship-set/suggested-songs'
 import { AssignSuggesterModal } from '@/components/worship-set/assign-suggester-modal'
-import { useSuggestionsByWorshipSet, useApproveSuggestion, useRejectSuggestion } from '@/hooks/use-suggestions'
+import * as suggestionHooks from '@/hooks/use-suggestions'
 
-jest.mock('@/hooks/use-suggestions')
-jest.mock('@/hooks/use-toast', () => ({
+vi.mock('@/hooks/use-suggestions')
+vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
-    toast: jest.fn(),
+    toast: vi.fn(),
   }),
 }))
 
@@ -22,14 +22,68 @@ const createWrapper = () => {
   })
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider session={{ user: { id: '1', name: 'Admin', email: 'admin@example.com', roles: ['admin'] }, expires: '2099-01-01' }}>
-        {children}
-      </SessionProvider>
+      {children}
     </QueryClientProvider>
   )
 }
 
 describe('Suggestion Workflow Integration Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    // Set up default mock implementations for suggestion hooks
+    vi.mocked(suggestionHooks.useSuggestionsByWorshipSet).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any)
+
+    vi.mocked(suggestionHooks.useCreateSuggestionSlot).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+      isIdle: true,
+      error: null,
+      data: undefined,
+      variables: undefined,
+      context: undefined,
+      failureCount: 0,
+      failureReason: null,
+      reset: vi.fn(),
+      status: 'idle',
+      submittedAt: 0,
+    } as any)
+
+    vi.mocked(suggestionHooks.useAssignUserToSlot).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+      isIdle: true,
+      error: null,
+      data: undefined,
+      variables: undefined,
+      context: undefined,
+      failureCount: 0,
+      failureReason: null,
+      reset: vi.fn(),
+      status: 'idle',
+      submittedAt: 0,
+    } as any)
+
+    vi.mocked(suggestionHooks.useApproveSuggestion).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any)
+
+    vi.mocked(suggestionHooks.useRejectSuggestion).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any)
+  })
+
   describe('Admin - Assign Suggester Flow', () => {
     it('should allow admin to assign a suggester to a worship set', async () => {
       const user = userEvent.setup()
@@ -38,8 +92,8 @@ describe('Suggestion Workflow Integration Tests', () => {
         { id: 'user-2', name: 'Jane Smith', email: 'jane@example.com', roles: ['musician'] },
       ]
 
-      const mockOnClose = jest.fn()
-      const mockCreateSlot = jest.fn()
+      const mockOnClose = vi.fn()
+      const mockCreateSlot = vi.fn()
 
       render(
         <AssignSuggesterModal
@@ -92,24 +146,25 @@ describe('Suggestion Workflow Integration Tests', () => {
         },
       ]
 
-      const mockApproveSuggestion = jest.fn().mockResolvedValue({})
-      const mockRejectSuggestion = jest.fn().mockResolvedValue({})
+      const mockApproveSuggestion = vi.fn().mockResolvedValue({})
+      const mockRejectSuggestion = vi.fn().mockResolvedValue({})
 
-      ;(useSuggestionsByWorshipSet as jest.Mock).mockReturnValue({
+      vi.mocked(suggestionHooks.useSuggestionsByWorshipSet).mockClear()
+      vi.mocked(suggestionHooks.useSuggestionsByWorshipSet).mockImplementation(() => ({
         data: mockSuggestions,
         isLoading: false,
-      })
-      ;(useApproveSuggestion as jest.Mock).mockReturnValue({
+      } as any))
+      vi.mocked(suggestionHooks.useApproveSuggestion).mockReturnValue({
         mutateAsync: mockApproveSuggestion,
         isPending: false,
-      })
-      ;(useRejectSuggestion as jest.Mock).mockReturnValue({
+      } as any)
+      vi.mocked(suggestionHooks.useRejectSuggestion).mockReturnValue({
         mutateAsync: mockRejectSuggestion,
         isPending: false,
-      })
+      } as any)
 
-      const mockOnAddToSet = jest.fn()
-      const mockOnReject = jest.fn()
+      const mockOnAddToSet = vi.fn()
+      const mockOnReject = vi.fn()
 
       render(
         <SuggestedSongs
@@ -125,7 +180,8 @@ describe('Suggestion Workflow Integration Tests', () => {
         expect(screen.getByText('Amazing Grace')).toBeInTheDocument()
         expect(screen.getByText('Traditional')).toBeInTheDocument()
         expect(screen.getByText('"Great song for worship"')).toBeInTheDocument()
-        expect(screen.getByText('Suggested by John Doe')).toBeInTheDocument()
+        // Check for suggester name - the text is split across elements
+        expect(screen.getByText('John Doe')).toBeInTheDocument()
       })
 
       // Click "Add to Set" button
@@ -159,20 +215,20 @@ describe('Suggestion Workflow Integration Tests', () => {
         },
       ]
 
-      ;(useSuggestionsByWorshipSet as jest.Mock).mockReturnValue({
+      vi.mocked(suggestionHooks.useSuggestionsByWorshipSet).mockReturnValue({
         data: mockSuggestions,
         isLoading: false,
-      })
-      ;(useApproveSuggestion as jest.Mock).mockReturnValue({
-        mutateAsync: jest.fn(),
+      } as any)
+      vi.mocked(suggestionHooks.useApproveSuggestion).mockReturnValue({
+        mutateAsync: vi.fn(),
         isPending: false,
-      })
-      ;(useRejectSuggestion as jest.Mock).mockReturnValue({
-        mutateAsync: jest.fn(),
+      } as any)
+      vi.mocked(suggestionHooks.useRejectSuggestion).mockReturnValue({
+        mutateAsync: vi.fn(),
         isPending: false,
-      })
+      } as any)
 
-      const mockOnReject = jest.fn()
+      const mockOnReject = vi.fn()
 
       render(
         <SuggestedSongs
@@ -194,10 +250,10 @@ describe('Suggestion Workflow Integration Tests', () => {
     })
 
     it('should show empty state when no suggestions', async () => {
-      ;(useSuggestionsByWorshipSet as jest.Mock).mockReturnValue({
+      vi.mocked(suggestionHooks.useSuggestionsByWorshipSet).mockReturnValue({
         data: [],
         isLoading: false,
-      })
+      } as any)
 
       render(
         <SuggestedSongs worshipSetId="worship-set-1" />,
@@ -244,12 +300,13 @@ describe('Suggestion Workflow Integration Tests', () => {
         },
       }
 
-      ;(useSuggestionsByWorshipSet as jest.Mock).mockReturnValue({
+      vi.mocked(suggestionHooks.useSuggestionsByWorshipSet).mockClear()
+      vi.mocked(suggestionHooks.useSuggestionsByWorshipSet).mockImplementation(() => ({
         data: [mockSuggestion],
         isLoading: false,
-      })
+      } as any))
 
-      const mockOnAddToSet = jest.fn()
+      const mockOnAddToSet = vi.fn()
 
       render(
         <SuggestedSongs
@@ -264,7 +321,8 @@ describe('Suggestion Workflow Integration Tests', () => {
         expect(screen.getByText('How Great Is Our God')).toBeInTheDocument()
         expect(screen.getByText('Chris Tomlin')).toBeInTheDocument()
         expect(screen.getByText('"Perfect for this Sunday"')).toBeInTheDocument()
-        expect(screen.getByText('Suggested by Worship Leader')).toBeInTheDocument()
+        // Check for suggester name - the text is split across elements
+        expect(screen.getByText('Worship Leader')).toBeInTheDocument()
       })
 
       // Leader clicks "Add to Set"

@@ -189,6 +189,42 @@ describe('AdminDashboard Page', () => {
       status: 'idle',
       submittedAt: 0,
     } as any)
+
+    vi.mocked(leaderRotationHooks.useAssignLeader).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+      isIdle: true,
+      error: null,
+      data: undefined,
+      variables: undefined,
+      context: undefined,
+      failureCount: 0,
+      failureReason: null,
+      reset: vi.fn(),
+      status: 'idle',
+      submittedAt: 0,
+    } as any)
+
+    vi.mocked(leaderRotationHooks.useReorderLeaderRotations).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+      isIdle: true,
+      error: null,
+      data: undefined,
+      variables: undefined,
+      context: undefined,
+      failureCount: 0,
+      failureReason: null,
+      reset: vi.fn(),
+      status: 'idle',
+      submittedAt: 0,
+    } as any)
   })
 
   const renderComponent = () => {
@@ -201,7 +237,7 @@ describe('AdminDashboard Page', () => {
 
   describe('Authentication and Authorization', () => {
     it('should render dashboard for admin users', async () => {
-      vi.spyOn(leaderRotationHooks, 'useLeaderRotations').mockReturnValue({
+      vi.mocked(leaderRotationHooks.useLeaderRotations).mockReturnValue({
         data: mockRotations,
         isLoading: false,
       } as any)
@@ -244,7 +280,7 @@ describe('AdminDashboard Page', () => {
 
   describe('Leader Rotation Management', () => {
     beforeEach(() => {
-      vi.spyOn(leaderRotationHooks, 'useLeaderRotations').mockReturnValue({
+      vi.mocked(leaderRotationHooks.useLeaderRotations).mockReturnValue({
         data: mockRotations,
         isLoading: false,
       } as any)
@@ -253,26 +289,37 @@ describe('AdminDashboard Page', () => {
     it('should display leader rotation table', async () => {
       renderComponent()
 
+      // Wait for service types to load (which triggers the rotation display)
+      // Use getAllByText since "Sunday Service" appears in multiple places
       await waitFor(() => {
-        expect(screen.getByText('Leader Rotation Management')).toBeInTheDocument()
+        const serviceNames = screen.getAllByText('Sunday Service')
+        expect(serviceNames.length).toBeGreaterThan(0)
       })
 
-      expect(screen.getByText('Sunday Service')).toBeInTheDocument()
-      expect(screen.getByText('Leader One')).toBeInTheDocument()
+      expect(screen.getByText('Leader Rotation Management')).toBeInTheDocument()
+      // Leaders appear in both rotation table and upcoming services, so use getAllByText
+      const leaderOneElements = screen.getAllByText('Leader One')
+      expect(leaderOneElements.length).toBeGreaterThan(0)
       expect(screen.getByText('Leader Two')).toBeInTheDocument()
     })
 
     it('should display rotation order correctly', async () => {
       renderComponent()
 
+      // Wait for data to load - use getAllByText since "Sunday Service" appears in multiple places
       await waitFor(() => {
-        const table = screen.getByRole('table')
-        const rows = within(table).getAllByRole('row')
-
-        // Check rotation orders in table (skip header row)
-        expect(within(rows[1]).getByText('1')).toBeInTheDocument()
-        expect(within(rows[2]).getByText('2')).toBeInTheDocument()
+        const serviceNames = screen.getAllByText('Sunday Service')
+        expect(serviceNames.length).toBeGreaterThan(0)
       })
+
+      // Get the first table (leader rotation table, not upcoming services)
+      const tables = screen.getAllByRole('table')
+      const rotationTable = tables[0]
+      const rows = within(rotationTable).getAllByRole('row')
+
+      // Check rotation orders in table (skip header row)
+      expect(within(rows[1]).getByText('1')).toBeInTheDocument()
+      expect(within(rows[2]).getByText('2')).toBeInTheDocument()
     })
 
     it('should show "Add to Rotation" button', async () => {
@@ -293,34 +340,42 @@ describe('AdminDashboard Page', () => {
 
       await user.click(screen.getByRole('button', { name: /add to rotation/i }))
 
-      expect(screen.getByText('Add Leader to Rotation')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText('Add Leader to Rotation')).toBeInTheDocument()
+      })
     })
 
     it('should display active/inactive status badges', async () => {
       renderComponent()
 
+      // Wait for data to load - use getAllByText since "Sunday Service" appears in multiple places
       await waitFor(() => {
-        const badges = screen.getAllByText('Active')
-        expect(badges.length).toBeGreaterThan(0)
+        const serviceNames = screen.getAllByText('Sunday Service')
+        expect(serviceNames.length).toBeGreaterThan(0)
       })
+
+      const badges = screen.getAllByText('Active')
+      expect(badges.length).toBeGreaterThan(0)
     })
 
     it('should show delete button for each rotation', async () => {
       renderComponent()
 
+      // Wait for data to load - use getAllByText since "Sunday Service" appears in multiple places
       await waitFor(() => {
-        const deleteButtons = screen.getAllByRole('button', { name: '' })
-        const trashButtons = deleteButtons.filter(btn =>
-          btn.querySelector('svg')?.classList.contains('lucide-trash-2')
-        )
-        expect(trashButtons.length).toBeGreaterThan(0)
+        const serviceNames = screen.getAllByText('Sunday Service')
+        expect(serviceNames.length).toBeGreaterThan(0)
       })
+
+      // The delete buttons have aria-labels like "Remove Leader One from rotation"
+      const deleteButtons = screen.getAllByRole('button', { name: /remove .* from rotation/i })
+      expect(deleteButtons.length).toBeGreaterThan(0)
     })
   })
 
   describe('Add Rotation Modal', () => {
     beforeEach(() => {
-      vi.spyOn(leaderRotationHooks, 'useLeaderRotations').mockReturnValue({
+      vi.mocked(leaderRotationHooks.useLeaderRotations).mockReturnValue({
         data: mockRotations,
         isLoading: false,
       } as any)
@@ -336,15 +391,25 @@ describe('AdminDashboard Page', () => {
 
       await user.click(screen.getByRole('button', { name: /add to rotation/i }))
 
-      expect(screen.getByText('Leader')).toBeInTheDocument()
-      expect(screen.getByText('Service Type')).toBeInTheDocument()
-      expect(screen.getByText('Rotation Order')).toBeInTheDocument()
+      await waitFor(() => {
+        // The dialog should be open
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+
+      // Check for form fields inside the dialog
+      const dialog = screen.getByRole('dialog')
+      // The labels are inside the dialog, look for them by their text content
+      // Using getAllByText because "Leader" might appear elsewhere, then check we found one in dialog
+      const leaderLabels = within(dialog).getAllByText('Leader')
+      expect(leaderLabels.length).toBeGreaterThan(0)
+      expect(within(dialog).getByText('Service Type')).toBeInTheDocument()
+      expect(within(dialog).getByText('Rotation Order')).toBeInTheDocument()
     })
 
     it('should validate required fields before submission', async () => {
       const user = userEvent.setup()
       const mockCreate = vi.fn()
-      vi.spyOn(leaderRotationHooks, 'useCreateLeaderRotation').mockReturnValue({
+      vi.mocked(leaderRotationHooks.useCreateLeaderRotation).mockReturnValue({
         mutateAsync: mockCreate,
         isPending: false,
       } as any)
@@ -370,7 +435,7 @@ describe('AdminDashboard Page', () => {
 
   describe('Upcoming Services Display', () => {
     beforeEach(() => {
-      vi.spyOn(leaderRotationHooks, 'useLeaderRotations').mockReturnValue({
+      vi.mocked(leaderRotationHooks.useLeaderRotations).mockReturnValue({
         data: mockRotations,
         isLoading: false,
       } as any)
@@ -387,8 +452,11 @@ describe('AdminDashboard Page', () => {
     it('should show assigned leader for services', async () => {
       renderComponent()
 
+      // Wait for services to load - Leader One is both in rotation AND assigned to a service
       await waitFor(() => {
-        expect(screen.getByText('Leader One')).toBeInTheDocument()
+        // The leader appears in multiple places - at least one should be visible
+        const leaderElements = screen.getAllByText('Leader One')
+        expect(leaderElements.length).toBeGreaterThan(0)
       })
     })
 
@@ -404,7 +472,8 @@ describe('AdminDashboard Page', () => {
       renderComponent()
 
       await waitFor(() => {
-        const assignButtons = screen.getAllByRole('button', { name: /assign/i })
+        // Look for buttons with aria-labels matching assign/reassign pattern
+        const assignButtons = screen.getAllByRole('button', { name: /assign leader for|reassign leader for/i })
         expect(assignButtons.length).toBeGreaterThan(0)
       })
     })
@@ -414,20 +483,22 @@ describe('AdminDashboard Page', () => {
       renderComponent()
 
       await waitFor(() => {
-        const assignButton = screen.getAllByRole('button', { name: /assign/i })[0]
-        expect(assignButton).toBeInTheDocument()
+        const assignButtons = screen.getAllByRole('button', { name: /assign leader for|reassign leader for/i })
+        expect(assignButtons[0]).toBeInTheDocument()
       })
 
-      const assignButton = screen.getAllByRole('button', { name: /assign/i })[0]
+      const assignButton = screen.getAllByRole('button', { name: /assign leader for|reassign leader for/i })[0]
       await user.click(assignButton)
 
-      expect(screen.getByText('Assign Leader')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText('Assign Leader')).toBeInTheDocument()
+      })
     })
   })
 
   describe('Loading and Error States', () => {
     it('should show loading skeleton while fetching rotations', () => {
-      vi.spyOn(leaderRotationHooks, 'useLeaderRotations').mockReturnValue({
+      vi.mocked(leaderRotationHooks.useLeaderRotations).mockReturnValue({
         data: undefined,
         isLoading: true,
       } as any)
@@ -439,7 +510,7 @@ describe('AdminDashboard Page', () => {
     })
 
     it('should handle empty rotations gracefully', async () => {
-      vi.spyOn(leaderRotationHooks, 'useLeaderRotations').mockReturnValue({
+      vi.mocked(leaderRotationHooks.useLeaderRotations).mockReturnValue({
         data: [],
         isLoading: false,
       } as any)
@@ -447,14 +518,15 @@ describe('AdminDashboard Page', () => {
       renderComponent()
 
       await waitFor(() => {
-        expect(screen.getByText(/no leaders in rotation/i)).toBeInTheDocument()
+        const elements = screen.getAllByText(/no leaders in rotation/i)
+        expect(elements.length).toBeGreaterThan(0)
       })
     })
   })
 
   describe('Quick Actions', () => {
     beforeEach(() => {
-      vi.spyOn(leaderRotationHooks, 'useLeaderRotations').mockReturnValue({
+      vi.mocked(leaderRotationHooks.useLeaderRotations).mockReturnValue({
         data: mockRotations,
         isLoading: false,
       } as any)

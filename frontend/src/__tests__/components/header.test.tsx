@@ -215,7 +215,7 @@ describe('Header Component', () => {
     });
 
     it('should render sticky header with backdrop blur', () => {
-      const { container } = render(<Header />);
+      const { container } = renderWithQueryClient(<Header />);
 
       const header = container.querySelector('header');
       expect(header).toHaveClass('sticky');
