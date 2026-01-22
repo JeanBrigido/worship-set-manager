@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import {
+  ArrowLeft,
   Calendar,
   Users,
   Music,
@@ -246,10 +249,18 @@ export default function ServiceAssignmentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`Assignments - ${service.serviceType.name}`}
-        description={`${new Date(service.serviceDate).toLocaleDateString()} at ${service.serviceType.defaultStartTime}`}
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title={`Assignments - ${service.serviceType.name}`}
+          description={`${new Date(service.serviceDate).toLocaleDateString()} at ${service.serviceType.defaultStartTime}`}
+        />
+        <Button variant="outline" asChild>
+          <Link href={`/services/${serviceId}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Service
+          </Link>
+        </Button>
+      </div>
 
       {service.leader && (
         <Card>
