@@ -32,8 +32,12 @@ export const signup = async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ data: { id: user.id, email: user.email, name: user.name } });
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
+    // Handle unique constraint violation (duplicate email) without revealing specifics
+    if (err.code === 'P2002') {
+      return res.status(400).json({ error: { message: "Unable to create account. Please try a different email address." } });
+    }
     res.status(500).json({ error: { message: "Could not create user" } });
   }
 };

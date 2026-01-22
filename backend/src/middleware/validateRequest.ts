@@ -64,9 +64,16 @@ export const validateRequest = (schemaName: keyof typeof schemas) => {
       schemas[schemaName].parse(req.body);
       next();
     } catch (err: any) {
+      // Sanitize Zod errors to only expose field names and user-friendly messages
+      // Don't expose internal schema details
+      const sanitizedErrors = err.errors?.map((e: any) => ({
+        field: e.path?.join('.') || 'unknown',
+        message: e.message || 'Invalid value',
+      })) || [];
+
       return res.status(400).json({
-        error: "Validation failed",
-        details: err.errors,
+        error: { message: "Validation failed" },
+        details: sanitizedErrors,
       });
     }
   };
