@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 
@@ -10,6 +11,7 @@ interface JwtPayload {
 /**
  * Helper function to recalculate leader assignments for all future services
  * of a given service type based on the current leader rotation.
+ * Uses batch operations to avoid N+1 query issues.
  */
 async function recalculateLeaderAssignments(serviceTypeId: string): Promise<void> {
   // Get all active rotations for this service type ordered by rotationOrder
@@ -21,62 +23,60 @@ async function recalculateLeaderAssignments(serviceTypeId: string): Promise<void
     orderBy: { rotationOrder: 'asc' }
   });
 
-  if (rotations.length === 0) {
-    // No active rotations - clear all leader assignments for future services
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const futureServices = await prisma.service.findMany({
-      where: {
-        serviceTypeId,
-        serviceDate: { gte: today }
-      },
-      include: { worshipSet: true },
-      orderBy: { serviceDate: 'asc' }
-    });
-
-    // Clear leader assignments for future services
-    for (const service of futureServices) {
-      if (service.worshipSet) {
-        await prisma.worshipSet.update({
-          where: { id: service.worshipSet.id },
-          data: { leaderUserId: null }
-        });
-      }
-    }
-    return;
-  }
-
-  // Get all future services for this service type ordered by date
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Get all future services with their worship sets
   const futureServices = await prisma.service.findMany({
     where: {
       serviceTypeId,
       serviceDate: { gte: today }
     },
-    include: { worshipSet: true },
+    include: { worshipSet: { select: { id: true } } },
     orderBy: { serviceDate: 'asc' }
   });
 
-  if (futureServices.length === 0) {
-    return; // No future services to update
+  // Collect worship set IDs that need updates
+  const worshipSetIds = futureServices
+    .map(s => s.worshipSet?.id)
+    .filter((id): id is string => !!id);
+
+  if (worshipSetIds.length === 0) {
+    return; // No worship sets to update
   }
 
-  // Assign leaders based on rotation order (cycling through rotations)
-  for (let i = 0; i < futureServices.length; i++) {
-    const service = futureServices[i];
-    const rotationIndex = i % rotations.length;
+  if (rotations.length === 0) {
+    // No active rotations - clear all leader assignments in one query
+    await prisma.worshipSet.updateMany({
+      where: { id: { in: worshipSetIds } },
+      data: { leaderUserId: null }
+    });
+    return;
+  }
+
+  // Group worship sets by their assigned leader to minimize queries
+  const updatesByLeader = new Map<string, string[]>();
+
+  futureServices.forEach((service, index) => {
+    if (!service.worshipSet?.id) return;
+    const rotationIndex = index % rotations.length;
     const leaderUserId = rotations[rotationIndex].userId;
 
-    if (service.worshipSet) {
-      await prisma.worshipSet.update({
-        where: { id: service.worshipSet.id },
-        data: { leaderUserId }
-      });
+    if (!updatesByLeader.has(leaderUserId)) {
+      updatesByLeader.set(leaderUserId, []);
     }
-  }
+    updatesByLeader.get(leaderUserId)!.push(service.worshipSet.id);
+  });
+
+  // Execute all updates in a single transaction
+  await prisma.$transaction(
+    Array.from(updatesByLeader.entries()).map(([leaderUserId, setIds]) =>
+      prisma.worshipSet.updateMany({
+        where: { id: { in: setIds } },
+        data: { leaderUserId }
+      })
+    )
+  );
 }
 
 /**
@@ -99,7 +99,7 @@ export const listRotations = async (req: Request & { user?: JwtPayload }, res: R
 
     res.json({ data: rotations });
   } catch (err) {
-    console.error("Error listing rotations:", err);
+    logger.error({ err }, 'Error listing rotations:');
     res.status(500).json({ error: { message: "Could not list leader rotations" } });
   }
 };
@@ -126,7 +126,7 @@ export const getRotation = async (req: Request & { user?: JwtPayload }, res: Res
 
     res.json({ data: rotation });
   } catch (err) {
-    console.error("Error fetching rotation:", err);
+    logger.error({ err }, 'Error fetching rotation:');
     res.status(500).json({ error: { message: "Could not fetch leader rotation" } });
   }
 };
@@ -172,7 +172,7 @@ export const createRotation = async (req: Request & { user?: JwtPayload }, res: 
 
     res.status(201).json({ data: rotation });
   } catch (err: any) {
-    console.error("Error creating rotation:", err);
+    logger.error({ err }, 'Error creating rotation:');
 
     if (err.code === 'P2002') {
       return res.status(400).json({
@@ -214,7 +214,7 @@ export const updateRotation = async (req: Request & { user?: JwtPayload }, res: 
 
     res.json({ data: rotation });
   } catch (err: any) {
-    console.error("Error updating rotation:", err);
+    logger.error({ err }, 'Error updating rotation:');
 
     if (err.code === 'P2025') {
       return res.status(404).json({ error: { message: "Leader rotation not found" } });
@@ -253,7 +253,7 @@ export const deleteRotation = async (req: Request & { user?: JwtPayload }, res: 
 
     res.status(204).send();
   } catch (err: any) {
-    console.error("Error deleting rotation:", err);
+    logger.error({ err }, 'Error deleting rotation:');
 
     if (err.code === 'P2025') {
       return res.status(404).json({ error: { message: "Leader rotation not found" } });
@@ -326,7 +326,7 @@ export const getNextLeader = async (req: Request & { user?: JwtPayload }, res: R
 
     res.json({ data: nextRotation });
   } catch (err) {
-    console.error("Error getting next leader:", err);
+    logger.error({ err }, 'Error getting next leader:');
     res.status(500).json({ error: { message: "Could not determine next leader" } });
   }
 };
@@ -353,7 +353,7 @@ export const getRotationsByServiceType = async (req: Request & { user?: JwtPaylo
 
     res.json({ data: rotations });
   } catch (err) {
-    console.error("Error fetching rotations by service type:", err);
+    logger.error({ err }, 'Error fetching rotations by service type:');
     res.status(500).json({ error: { message: "Could not fetch leader rotations" } });
   }
 };
@@ -418,7 +418,7 @@ export const reorderRotations = async (req: Request & { user?: JwtPayload }, res
 
     res.json({ data: rotations });
   } catch (err) {
-    console.error("Error reordering rotations:", err);
+    logger.error({ err }, 'Error reordering rotations:');
     res.status(500).json({ error: { message: "Could not reorder leader rotations" } });
   }
 };

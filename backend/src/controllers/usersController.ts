@@ -4,6 +4,7 @@ import jwt, { SignOptions } from "jsonwebtoken";
 import prisma from "../prisma";
 import { Role } from "@prisma/client"; // import enum
 import { signToken } from "../utils/jwt";
+import logger from "../utils/logger";
 
 interface JwtPayload {
   userId: string;
@@ -33,11 +34,12 @@ export const signup = async (req: Request, res: Response) => {
 
     res.status(201).json({ data: { id: user.id, email: user.email, name: user.name } });
   } catch (err: any) {
-    console.error(err);
     // Handle unique constraint violation (duplicate email) without revealing specifics
     if (err.code === 'P2002') {
+      logger.info({ email: req.body.email }, 'Signup attempt with existing email');
       return res.status(400).json({ error: { message: "Unable to create account. Please try a different email address." } });
     }
+    logger.error({ err }, 'Signup failed');
     res.status(500).json({ error: { message: "Could not create user" } });
   }
 };
@@ -74,7 +76,7 @@ export const login = async (req: Request, res: Response) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Login failed');
     res.status(500).json({ error: { message: "Login failed" } });
   }
 };
@@ -108,7 +110,7 @@ export const getMe = async (req: Request & { user?: JwtPayload }, res: Response)
       }
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch user" } });
   }
 };
@@ -198,7 +200,7 @@ export const listUsers = async (req: Request & { user?: JwtPayload }, res: Respo
       }))
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list users" } });
   }
 };
@@ -240,7 +242,7 @@ export const createUser = async (req: Request & { user?: JwtPayload }, res: Resp
       }
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not create user" } });
   }
 };
@@ -308,7 +310,7 @@ export const updateUser = async (req: Request & { user?: JwtPayload }, res: Resp
       }
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update user" } });
   }
 };
@@ -362,7 +364,7 @@ export const getUser = async (req: Request & { user?: JwtPayload }, res: Respons
       }
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch user" } });
   }
 };
@@ -383,7 +385,7 @@ export const deleteUser = async (req: Request & { user?: JwtPayload }, res: Resp
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete user" } });
   }
 };
@@ -400,12 +402,12 @@ export const toggleUserActive = async (req: Request & { user?: JwtPayload }, res
     // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: { message: 'User not found' } });
     }
 
     // Prevent deactivating yourself
     if (req.user?.userId === id && !isActive) {
-      return res.status(400).json({ error: 'You cannot deactivate yourself' });
+      return res.status(400).json({ error: { message: 'You cannot deactivate yourself' } });
     }
 
     const user = await prisma.user.update({
@@ -424,8 +426,8 @@ export const toggleUserActive = async (req: Request & { user?: JwtPayload }, res
 
     res.json({ data: user });
   } catch (err) {
-    console.error('Error toggling user active status:', err);
-    res.status(500).json({ error: 'Failed to update user status' });
+    logger.error({ err }, 'Error toggling user active status');
+    res.status(500).json({ error: { message: 'Failed to update user status' } });
   }
 };
 
@@ -440,23 +442,23 @@ export const updateUserRoles = async (req: Request & { user?: JwtPayload }, res:
 
     // Defensive check - should be caught by middleware but verify
     if (!req.user?.userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: { message: 'Unauthorized' } });
     }
 
     // Defensive check - validate roles array
     if (!Array.isArray(roles) || roles.length === 0) {
-      return res.status(400).json({ error: 'At least one role is required' });
+      return res.status(400).json({ error: { message: 'At least one role is required' } });
     }
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: { message: 'User not found' } });
     }
 
     // Prevent removing your own admin role
     if (req.user.userId === id && existingUser.roles.includes('admin') && !roles.includes('admin')) {
-      return res.status(400).json({ error: 'You cannot remove your own admin role' });
+      return res.status(400).json({ error: { message: 'You cannot remove your own admin role' } });
     }
 
     const user = await prisma.user.update({
@@ -475,8 +477,8 @@ export const updateUserRoles = async (req: Request & { user?: JwtPayload }, res:
 
     res.json({ data: user });
   } catch (error) {
-    console.error('Error updating user roles:', error);
-    res.status(500).json({ error: 'Failed to update user roles' });
+    logger.error({ err: error }, 'Error updating user roles');
+    res.status(500).json({ error: { message: 'Failed to update user roles' } });
   }
 };
 
@@ -663,7 +665,7 @@ export const getSongProgress = async (req: Request & { user?: JwtPayload }, res:
 
     res.json({ data: result });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch song progress" } });
   }
 };

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 
@@ -32,7 +33,7 @@ export const listDefaultAssignments = async (req: Request & { user?: JwtPayload 
 
     res.json({ data: assignments });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch default assignments" } });
   }
 };
@@ -59,7 +60,7 @@ export const getDefaultAssignment = async (req: Request & { user?: JwtPayload },
 
     res.json({ data: assignment });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch default assignment" } });
   }
 };
@@ -104,7 +105,7 @@ export const createDefaultAssignment = async (req: Request & { user?: JwtPayload
 
     res.status(201).json({ data: assignment });
   } catch (err: any) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     if (err.code === "P2002") {
       return res.status(400).json({
         error: "A default assignment already exists for this service type and instrument",
@@ -139,7 +140,7 @@ export const updateDefaultAssignment = async (req: Request & { user?: JwtPayload
 
     res.json({ data: assignment });
   } catch (err: any) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     if (err.code === "P2025") {
       return res.status(404).json({ error: { message: "Default assignment not found" } });
     }
@@ -163,7 +164,7 @@ export const deleteDefaultAssignment = async (req: Request & { user?: JwtPayload
 
     res.status(204).send();
   } catch (err: any) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     if (err.code === "P2025") {
       return res.status(404).json({ error: { message: "Default assignment not found" } });
     }

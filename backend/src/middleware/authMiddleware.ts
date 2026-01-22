@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { Role } from "@prisma/client";
 import { verifyToken } from "../utils/jwt";
 import prisma from "../prisma";
+import logger from "../utils/logger";
 
 interface JwtPayload {
   userId: string;
@@ -40,7 +41,7 @@ export const authMiddleware = async (
     req.user = payload;
     next();
   } catch (err) {
-    console.error("JWT verification failed:", err);
+    logger.debug({ err }, 'JWT verification failed');
     return res.status(401).json({ error: { message: "Invalid token" } });
   }
 };

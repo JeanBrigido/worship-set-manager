@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 
@@ -60,7 +61,7 @@ export const listSongs = async (req: Request & { user?: JwtPayload }, res: Respo
       },
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list songs" } });
   }
 };
@@ -86,7 +87,7 @@ export const getSong = async (req: Request & { user?: JwtPayload }, res: Respons
     if (!song) return res.status(404).json({ error: { message: "Song not found" } });
     res.json({ data: song });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch song" } });
   }
 };
@@ -113,7 +114,7 @@ export const createSong = async (req: Request & { user?: JwtPayload }, res: Resp
 
     res.status(201).json({ data: song });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not create song" } });
   }
 };
@@ -143,7 +144,7 @@ export const updateSong = async (req: Request & { user?: JwtPayload }, res: Resp
 
     res.json({ data: updated });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update song" } });
   }
 };
@@ -167,7 +168,7 @@ export const deleteSong = async (req: Request & { user?: JwtPayload }, res: Resp
 
     res.json({ data: updated });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete song" } });
   }
 };

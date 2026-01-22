@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role, SlotStatus } from "@prisma/client";
 
@@ -19,7 +20,7 @@ export const listSlotsForSet = async (req: Request & { user?: JwtPayload }, res:
     });
     res.json({ data: slots });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list slots" } });
   }
 };
@@ -37,7 +38,7 @@ export const getSlot = async (req: Request & { user?: JwtPayload }, res: Respons
     if (!slot) return res.status(404).json({ error: { message: "Slot not found" } });
     res.json({ data: slot });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch slot" } });
   }
 };
@@ -65,7 +66,7 @@ export const createSlot = async (req: Request & { user?: JwtPayload }, res: Resp
 
     res.status(201).json({ data: slot });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not create slot" } });
   }
 };
@@ -94,7 +95,7 @@ export const updateSlot = async (req: Request & { user?: JwtPayload }, res: Resp
 
     res.json({ data: updated });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update slot" } });
   }
 };
@@ -114,7 +115,7 @@ export const deleteSlot = async (req: Request & { user?: JwtPayload }, res: Resp
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete slot" } });
   }
 };
@@ -155,7 +156,7 @@ export const assignUser = async (req: Request & { user?: JwtPayload }, res: Resp
 
     res.json({ data: updated });
   } catch (err: any) {
-    console.error("Error assigning user:", err);
+    logger.error({ err }, 'Error assigning user:');
 
     if (err.code === 'P2025') {
       return res.status(404).json({ error: { message: "Suggestion slot not found" } });
@@ -221,7 +222,7 @@ export const getMyAssignments = async (req: Request & { user?: JwtPayload }, res
 
     res.json({ data: slotsWithStatus });
   } catch (err) {
-    console.error("Error fetching my assignments:", err);
+    logger.error({ err }, 'Error fetching my assignments:');
     res.status(500).json({ error: { message: "Could not fetch your suggestion assignments" } });
   }
 };

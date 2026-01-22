@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as serviceTypesController from "../controllers/serviceTypesController";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { requireRole } from "../middleware/requireRole";
+import { mediumCache, noCache } from "../middleware/cacheControl";
 import { Role } from "@prisma/client";
 
 const router = Router();
@@ -12,21 +13,23 @@ const router = Router();
  */
 
 // List all service types (any role can view)
-router.get("/", authMiddleware, serviceTypesController.listServiceTypes);
+// Cache for 15 minutes since service types rarely change
+router.get("/", authMiddleware, mediumCache, serviceTypesController.listServiceTypes);
 
 // Get one service type
-router.get("/:id", authMiddleware, serviceTypesController.getServiceType);
+// Cache for 15 minutes since service types rarely change
+router.get("/:id", authMiddleware, mediumCache, serviceTypesController.getServiceType);
 
 // Admin only: create
-router.post("/", authMiddleware, requireRole([Role.admin]), serviceTypesController.createServiceType);
+router.post("/", authMiddleware, requireRole([Role.admin]), noCache, serviceTypesController.createServiceType);
 
 // Admin only: update
-router.put("/:id", authMiddleware, requireRole([Role.admin]), serviceTypesController.updateServiceType);
+router.put("/:id", authMiddleware, requireRole([Role.admin]), noCache, serviceTypesController.updateServiceType);
 
 // Admin only: delete
-router.delete("/:id", authMiddleware, requireRole([Role.admin]), serviceTypesController.deleteServiceType);
+router.delete("/:id", authMiddleware, requireRole([Role.admin]), noCache, serviceTypesController.deleteServiceType);
 
 // Admin only: generate services for the year
-router.post("/:id/generate-services", authMiddleware, requireRole([Role.admin]), serviceTypesController.generateServices);
+router.post("/:id/generate-services", authMiddleware, requireRole([Role.admin]), noCache, serviceTypesController.generateServices);
 
 export default router;

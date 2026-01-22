@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 
@@ -30,7 +31,7 @@ export const listSingerSongKeys = async (req: Request & { user?: JwtPayload }, r
 
     res.json({ data: keys });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list singer song keys" } });
   }
 };
@@ -55,7 +56,7 @@ export const getSingerSongKey = async (req: Request & { user?: JwtPayload }, res
 
     res.json({ data: key });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch singer song key" } });
   }
 };
@@ -121,7 +122,7 @@ export const getSuggestions = async (req: Request & { user?: JwtPayload }, res: 
       },
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch key suggestions" } });
   }
 };
@@ -166,7 +167,7 @@ export const createSingerSongKey = async (req: Request & { user?: JwtPayload }, 
 
     res.status(201).json({ data: record });
   } catch (err) {
-    console.error("Error creating singer song key:", err);
+    logger.error({ err }, 'Error creating singer song key:');
     res.status(500).json({ error: { message: "Could not create singer song key" } });
   }
 };
@@ -199,7 +200,7 @@ export const updateSingerSongKey = async (req: Request & { user?: JwtPayload }, 
 
     res.json({ data: updated });
   } catch (err: any) {
-    console.error("Error updating singer song key:", err);
+    logger.error({ err }, 'Error updating singer song key:');
 
     if (err.code === "P2025") {
       return res.status(404).json({ error: { message: "Singer song key not found" } });
@@ -223,7 +224,7 @@ export const deleteSingerSongKey = async (req: Request & { user?: JwtPayload }, 
 
     res.status(204).send();
   } catch (err: any) {
-    console.error("Error deleting singer song key:", err);
+    logger.error({ err }, 'Error deleting singer song key:');
 
     if (err.code === "P2025") {
       return res.status(404).json({ error: { message: "Singer song key not found" } });
@@ -290,7 +291,7 @@ export const getUserKeyProfile = async (req: Request & { user?: JwtPayload }, re
 
     res.json({ data: Array.from(songMap.values()) });
   } catch (err) {
-    console.error("Error fetching user key profile:", err);
+    logger.error({ err }, 'Error fetching user key profile:');
     res.status(500).json({ error: { message: "Could not fetch user key profile" } });
   }
 };

@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { errorHandler } from "./middleware/errorHandler";
+import logger from "./utils/logger";
 
 dotenv.config();
 
@@ -34,7 +35,7 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked request from origin: ${origin}`);
+      logger.warn({ origin }, 'CORS blocked request from origin');
       callback(new Error('Not allowed by CORS'), false);
     }
   },
@@ -58,6 +59,37 @@ app.use(globalLimiter);
 
 // Request body size limits
 app.use(express.json({ limit: '10kb' }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const logData = {
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      duration,
+      userId: (req as any).user?.userId,
+    };
+
+    // Skip health check logging in production to reduce noise
+    if (req.path === '/health' && isProduction) {
+      return;
+    }
+
+    if (res.statusCode >= 500) {
+      logger.error(logData, 'Request completed with server error');
+    } else if (res.statusCode >= 400) {
+      logger.warn(logData, 'Request completed with client error');
+    } else {
+      logger.info(logData, 'Request completed');
+    }
+  });
+
+  next();
+});
 
 // Test route
 app.get("/health", (req, res) => {
@@ -87,9 +119,9 @@ routes.forEach(({ path, file, name }) => {
   try {
     const route = require(file);
     app.use(path, route.default || route);
-    console.log(`✓ ${name} route loaded successfully`);
+    logger.info({ route: name, path }, 'Route loaded successfully');
   } catch (error) {
-    console.error(`✗ Failed to load ${name} route:`, error);
+    logger.error({ route: name, path, error }, 'Failed to load route');
   }
 });
 
@@ -99,7 +131,7 @@ app.use(errorHandler);
 // Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  logger.info({ port: PORT }, 'Server started');
 });
 
 

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
@@ -49,7 +50,7 @@ export const getChordSheet = async (req: Request & { user?: JwtPayload }, res: R
 
     res.json({ data: chordSheet });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch chord sheet" } });
   }
 };
@@ -84,7 +85,7 @@ export const upsertChordSheet = async (req: Request & { user?: JwtPayload }, res
 
     res.json({ data: chordSheet });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not save chord sheet" } });
   }
 };
@@ -121,7 +122,7 @@ export const deleteChordSheet = async (req: Request & { user?: JwtPayload }, res
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete chord sheet" } });
   }
 };
@@ -185,7 +186,7 @@ export const uploadChordSheetFile = async (req: RequestWithFile, res: Response) 
       });
 
     if (uploadError) {
-      console.error("Supabase upload error:", uploadError);
+      logger.error({ err: uploadError }, 'Supabase upload error');
       return res.status(500).json({ error: { message: "Failed to upload file" } });
     }
 
@@ -203,7 +204,7 @@ export const uploadChordSheetFile = async (req: RequestWithFile, res: Response) 
 
     res.json({ data: chordSheet });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not upload file" } });
   }
 };
@@ -258,7 +259,7 @@ export const getTransposedChordSheet = async (req: Request & { user?: JwtPayload
       },
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch chord sheet" } });
   }
 };

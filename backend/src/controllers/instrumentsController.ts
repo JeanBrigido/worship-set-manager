@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 
 /**
@@ -14,7 +15,7 @@ export const getAllInstruments = async (req: Request, res: Response) => {
 
     res.json({ data: instruments });
   } catch (error) {
-    console.error("Error fetching instruments:", error);
+    logger.error({ err: error }, 'Error fetching instruments');
     res.status(500).json({
       error: { message: "Failed to fetch instruments" }
     });
@@ -62,7 +63,7 @@ export const getInstrumentById = async (req: Request, res: Response) => {
 
     res.json({ data: instrument });
   } catch (error) {
-    console.error("Error fetching instrument:", error);
+    logger.error({ err: error }, 'Error fetching instrument');
     res.status(500).json({
       error: { message: "Failed to fetch instrument" }
     });
@@ -86,7 +87,7 @@ export const createInstrument = async (req: Request, res: Response) => {
 
     res.status(201).json({ data: instrument });
   } catch (error: any) {
-    console.error("Error creating instrument:", error);
+    logger.error({ err: error }, 'Error creating instrument');
 
     if (error.code === 'P2002') {
       return res.status(400).json({
@@ -119,7 +120,7 @@ export const updateInstrument = async (req: Request, res: Response) => {
 
     res.json({ data: instrument });
   } catch (error: any) {
-    console.error("Error updating instrument:", error);
+    logger.error({ err: error }, 'Error updating instrument');
 
     if (error.code === 'P2002') {
       return res.status(400).json({
@@ -152,7 +153,7 @@ export const deleteInstrument = async (req: Request, res: Response) => {
 
     res.status(204).send();
   } catch (error: any) {
-    console.error("Error deleting instrument:", error);
+    logger.error({ err: error }, 'Error deleting instrument');
 
     if (error.code === 'P2025') {
       return res.status(404).json({

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 
@@ -26,7 +27,7 @@ export const listAvailabilityForUser = async (req: Request & { user?: JwtPayload
 
     res.json({ data: records });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list availability" } });
   }
 };
@@ -47,7 +48,7 @@ export const getAvailability = async (req: Request & { user?: JwtPayload }, res:
 
     res.json({ data: record });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch availability" } });
   }
 };
@@ -70,7 +71,7 @@ export const createAvailability = async (req: Request & { user?: JwtPayload }, r
 
     res.status(201).json({ data: record });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not create availability" } });
   }
 };
@@ -101,7 +102,7 @@ export const updateAvailability = async (req: Request & { user?: JwtPayload }, r
 
     res.json({ data: updated });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update availability" } });
   }
 };
@@ -124,7 +125,7 @@ export const deleteAvailability = async (req: Request & { user?: JwtPayload }, r
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete availability" } });
   }
 };

@@ -4,6 +4,7 @@ import { authMiddleware } from "../middleware/authMiddleware";
 import { requireRole } from "../middleware/requireRole";
 import { validateRequest } from "../middleware/validateRequest";
 import { validateUuid } from "../middleware/validateUuid";
+import { shortCache, noCache } from "../middleware/cacheControl";
 import { Role } from "@prisma/client";
 
 const router = Router();
@@ -13,11 +14,11 @@ const router = Router();
  * Base path: /songs
  */
 
-// List all songs
-router.get("/", authMiddleware, songsController.listSongs);
+// List all songs (cache for 5 minutes)
+router.get("/", authMiddleware, shortCache, songsController.listSongs);
 
-// Get one song
-router.get("/:id", authMiddleware, validateUuid('id'), songsController.getSong);
+// Get one song (cache for 5 minutes)
+router.get("/:id", authMiddleware, validateUuid('id'), shortCache, songsController.getSong);
 
 // Any role: create new song
 router.post(

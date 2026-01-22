@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import logger from "../utils/logger";
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '../prisma';
@@ -52,7 +53,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     res.json(successResponse);
   } catch (err) {
-    console.error('Forgot password error:', err);
+    logger.error({ err }, 'Forgot password error:');
     res.status(500).json({ error: { message: 'Failed to process request' } });
   }
 };
@@ -102,7 +103,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     res.json({ message: 'Password has been reset successfully' });
   } catch (err) {
-    console.error('Reset password error:', err);
+    logger.error({ err }, 'Reset password error:');
     res.status(500).json({ error: { message: 'Failed to reset password' } });
   }
 };

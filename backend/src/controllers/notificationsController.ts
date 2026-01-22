@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role, Channel } from "@prisma/client";
 
@@ -26,7 +27,7 @@ export const listForUser = async (req: Request & { user?: JwtPayload }, res: Res
 
     res.json({ data: logs });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list notifications" } });
   }
 };
@@ -47,7 +48,7 @@ export const getNotification = async (req: Request & { user?: JwtPayload }, res:
 
     res.json({ data: log });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch notification" } });
   }
 };
@@ -76,7 +77,7 @@ export const createNotification = async (req: Request & { user?: JwtPayload }, r
 
     res.status(201).json({ data: log });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not create notification" } });
   }
 };

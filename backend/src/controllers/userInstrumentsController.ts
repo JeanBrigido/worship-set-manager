@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 
@@ -57,7 +58,7 @@ export const getUserInstruments = async (
 
     res.json({ data: instruments });
   } catch (err) {
-    console.error("Error fetching user instruments:", err);
+    logger.error({ err }, 'Error fetching user instruments:');
     res.status(500).json({
       error: { message: "Could not fetch user instruments" },
     });
@@ -165,7 +166,7 @@ export const updateUserInstruments = async (
 
     res.json({ data: instruments });
   } catch (err) {
-    console.error("Error updating user instruments:", err);
+    logger.error({ err }, 'Error updating user instruments:');
     res.status(500).json({
       error: { message: "Could not update user instruments" },
     });

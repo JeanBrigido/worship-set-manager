@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role, ServiceStatus } from "@prisma/client";
 
@@ -82,7 +83,7 @@ export const listServices = async (req: Request & { user?: JwtPayload }, res: Re
     });
     res.json({ data: services });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list services" } });
   }
 };
@@ -139,7 +140,7 @@ export const getService = async (req: Request & { user?: JwtPayload }, res: Resp
     if (!service) return res.status(404).json({ error: { message: "Service not found" } });
     res.json({ data: service });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch service" } });
   }
 };
@@ -203,7 +204,7 @@ export const createService = async (req: Request & { user?: JwtPayload }, res: R
 
     res.status(201).json({ data: service });
   } catch (err: any) {
-    console.error("Error creating service:", err);
+    logger.error({ err }, 'Error creating service:');
     res.status(500).json({ error: { message: "Could not create service" } });
   }
 };
@@ -290,7 +291,7 @@ export const updateService = async (req: Request & { user?: JwtPayload }, res: R
 
     res.json({ data: updated });
   } catch (err: any) {
-    console.error("Error updating service:", err);
+    logger.error({ err }, 'Error updating service:');
     if (err.code === 'P2025') {
       return res.status(404).json({ error: { message: "Service not found" } });
     }
@@ -313,7 +314,7 @@ export const deleteService = async (req: Request & { user?: JwtPayload }, res: R
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete service" } });
   }
 };
@@ -350,7 +351,7 @@ export const getServiceAssignments = async (req: Request & { user?: JwtPayload }
     const assignments = service.worshipSet?.assignments || [];
     res.json({ data: assignments });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch service assignments" } });
   }
 };
@@ -421,7 +422,7 @@ export const updateServiceAssignments = async (req: Request & { user?: JwtPayloa
 
     res.json({ data: updatedAssignments });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update service assignments" } });
   }
 };

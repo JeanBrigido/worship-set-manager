@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 
@@ -28,7 +29,7 @@ export const listSetSongs = async (req: Request & { user?: JwtPayload }, res: Re
     });
     res.json({ data: songs });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list set songs" } });
   }
 };
@@ -54,7 +55,7 @@ export const getSetSong = async (req: Request & { user?: JwtPayload }, res: Resp
     if (!song) return res.status(404).json({ error: { message: "Set song not found" } });
     res.json({ data: song });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch set song" } });
   }
 };
@@ -111,7 +112,7 @@ export const createSetSong = async (req: Request & { user?: JwtPayload }, res: R
 
     res.status(201).json({ data: song });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not add song to set" } });
   }
 };
@@ -144,7 +145,7 @@ export const updateSetSong = async (req: Request & { user?: JwtPayload }, res: R
 
     res.json({ data: updated });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update set song" } });
   }
 };
@@ -189,7 +190,7 @@ export const deleteSetSong = async (req: Request & { user?: JwtPayload }, res: R
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete set song" } });
   }
 };
@@ -263,7 +264,7 @@ export const reorderSetSongs = async (req: Request & { user?: JwtPayload }, res:
 
     res.json({ data: reorderedSongs });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not reorder songs" } });
   }
 };
@@ -308,7 +309,7 @@ export const markListened = async (req: Request & { user?: JwtPayload }, res: Re
 
     res.json({ data: { listenedAt: progress.listenedAt } });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not mark song as listened" } });
   }
 };
@@ -335,7 +336,7 @@ export const unmarkListened = async (req: Request & { user?: JwtPayload }, res: 
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not unmark song as listened" } });
   }
 };

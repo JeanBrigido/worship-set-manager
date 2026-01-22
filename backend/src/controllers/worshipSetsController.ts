@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
 import { Role, SetStatus } from "@prisma/client";
+import logger from "../utils/logger";
 
 interface JwtPayload {
   userId: string;
@@ -11,6 +12,7 @@ interface JwtPayload {
  * Helper: Capture singer-song-keys when a worship set is published
  * For each song with both a singer assigned AND a keyOverride,
  * create a SingerSongKey record to track the key history.
+ * Uses batch insert to avoid N+1 query issues.
  */
 async function captureSingerSongKeys(setId: string, serviceDate: Date): Promise<void> {
   // Get all set songs with singer and key info
@@ -28,38 +30,55 @@ async function captureSingerSongKeys(setId: string, serviceDate: Date): Promise<
 
   if (songsToCapture.length === 0) return;
 
-  // Create singer-song-key records (skip if already exists for same singer/song/date)
-  for (const setSong of songsToCapture) {
-    try {
-      await prisma.singerSongKey.create({
-        data: {
-          singerId: setSong.singerId!,
-          songId: setSong.songVersion.songId,
-          key: setSong.keyOverride!,
-          serviceDate,
-        },
-      });
-    } catch (err: any) {
-      // If there's a duplicate or other error, log but don't fail the publish
-      console.log(`Note: Could not capture key for singer ${setSong.singerId}, song ${setSong.songVersion.songId}:`, err.message);
-    }
+  // Prepare batch data for createMany
+  const keyRecords = songsToCapture.map((setSong) => ({
+    singerId: setSong.singerId!,
+    songId: setSong.songVersion.songId,
+    key: setSong.keyOverride!,
+    serviceDate,
+  }));
+
+  // Batch insert all records, skipping duplicates
+  try {
+    await prisma.singerSongKey.createMany({
+      data: keyRecords,
+      skipDuplicates: true, // Skip if record already exists
+    });
+  } catch (err: any) {
+    // Log but don't fail the publish
+    logger.warn({ err, setId }, 'Could not capture some singer keys');
   }
 }
 
 /**
  * GET /worshipSets
- * List all worship sets
+ * List all worship sets with pagination
+ * Query params: page, limit, status
  */
 export const listWorshipSets = async (req: Request & { user?: JwtPayload }, res: Response) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+    const status = req.query.status as SetStatus | undefined;
+
+    // Build where clause
+    const where: any = {};
+    if (status && Object.values(SetStatus).includes(status)) {
+      where.status = status;
+    }
+
+    // Get total count
+    const total = await prisma.worshipSet.count({ where });
+
     const sets = await prisma.worshipSet.findMany({
+      where,
       include: {
         service: {
           include: {
             serviceType: true
           }
         },
-        leaderUser: true,
+        leaderUser: { select: { id: true, name: true, email: true } },
         _count: {
           select: { setSongs: true }
         }
@@ -68,12 +87,22 @@ export const listWorshipSets = async (req: Request & { user?: JwtPayload }, res:
         service: {
           serviceDate: 'desc'
         }
-      }
+      },
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
-    res.json({ data: sets });
+    res.json({
+      data: sets,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch worship sets" } });
   }
 };
@@ -114,7 +143,7 @@ export const getWorshipSet = async (req: Request & { user?: JwtPayload }, res: R
     if (!set) return res.status(404).json({ error: { message: "Worship set not found" } });
     res.json({ data: set });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch worship set" } });
   }
 };
@@ -188,7 +217,7 @@ export const createWorshipSet = async (req: Request & { user?: JwtPayload }, res
 
     res.status(201).json({ data: setWithAssignments });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not create worship set" } });
   }
 };
@@ -258,7 +287,7 @@ export const updateWorshipSet = async (req: Request & { user?: JwtPayload }, res
 
     res.json({ data: updated });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update worship set" } });
   }
 };
@@ -278,7 +307,7 @@ export const publishWorshipSet = async (req: Request & { user?: JwtPayload }, re
     req.body = { status: 'published' };
     return updateWorshipSet(req, res);
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not publish worship set" } });
   }
 };
@@ -298,7 +327,7 @@ export const deleteWorshipSet = async (req: Request & { user?: JwtPayload }, res
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete worship set" } });
   }
 };
@@ -341,7 +370,7 @@ export const assignLeader = async (req: Request & { user?: JwtPayload }, res: Re
 
     res.json({ data: updated });
   } catch (err: any) {
-    console.error("Error assigning leader:", err);
+    logger.error({ err }, 'Error assigning leader');
 
     if (err.code === 'P2025') {
       return res.status(404).json({ error: { message: "Worship set not found" } });
@@ -423,7 +452,7 @@ export const getSuggestedLeader = async (req: Request & { user?: JwtPayload }, r
 
     res.json({ data: nextRotation });
   } catch (err) {
-    console.error("Error getting suggested leader:", err);
+    logger.error({ err }, 'Error getting suggested leader');
     res.status(500).json({ error: { message: "Could not determine suggested leader" } });
   }
 };

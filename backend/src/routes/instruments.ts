@@ -3,6 +3,7 @@ import * as instrumentsController from "../controllers/instrumentsController";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { requireRole } from "../middleware/requireRole";
 import { validateRequest } from "../middleware/validateRequest";
+import { mediumCache, noCache } from "../middleware/cacheControl";
 import { Role } from "@prisma/client";
 
 const router = Router();
@@ -13,16 +14,19 @@ const router = Router();
  */
 
 // Get all instruments (accessible by all authenticated users)
-router.get("/", authMiddleware, instrumentsController.getAllInstruments);
+// Cache for 15 minutes since instrument list rarely changes
+router.get("/", authMiddleware, mediumCache, instrumentsController.getAllInstruments);
 
 // Get specific instrument
-router.get("/:id", authMiddleware, instrumentsController.getInstrumentById);
+// Cache for 15 minutes since instrument data rarely changes
+router.get("/:id", authMiddleware, mediumCache, instrumentsController.getInstrumentById);
 
 // Admin only: Create new instrument
 router.post(
   "/",
   authMiddleware,
   requireRole([Role.admin]),
+  noCache,
   validateRequest("createInstrumentSchema"),
   instrumentsController.createInstrument
 );
@@ -32,6 +36,7 @@ router.put(
   "/:id",
   authMiddleware,
   requireRole([Role.admin]),
+  noCache,
   validateRequest("updateInstrumentSchema"),
   instrumentsController.updateInstrument
 );
@@ -41,6 +46,7 @@ router.delete(
   "/:id",
   authMiddleware,
   requireRole([Role.admin]),
+  noCache,
   instrumentsController.deleteInstrument
 );
 

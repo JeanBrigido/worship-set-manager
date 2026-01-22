@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 import { RRule } from "rrule";
@@ -25,7 +26,7 @@ export const listServiceTypes = async (_req: Request & { user?: JwtPayload }, re
     });
     res.json({ data: serviceTypes });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list service types" } });
   }
 };
@@ -49,7 +50,7 @@ export const getServiceType = async (req: Request & { user?: JwtPayload }, res: 
     if (!serviceType) return res.status(404).json({ error: { message: "Service type not found" } });
     res.json({ data: serviceType });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch service type" } });
   }
 };
@@ -71,7 +72,7 @@ export const createServiceType = async (req: Request & { user?: JwtPayload }, re
 
     res.status(201).json({ data: serviceType });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not create service type" } });
   }
 };
@@ -95,7 +96,7 @@ export const updateServiceType = async (req: Request & { user?: JwtPayload }, re
 
     res.json({ data: updated });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update service type" } });
   }
 };
@@ -114,7 +115,7 @@ export const deleteServiceType = async (req: Request & { user?: JwtPayload }, re
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete service type" } });
   }
 };
@@ -159,7 +160,7 @@ export const generateServices = async (req: Request & { user?: JwtPayload }, res
 
       rule = RRule.fromString(rruleString);
     } catch (parseErr) {
-      console.error("RRULE parse error:", parseErr);
+      logger.warn({ err: parseErr }, 'RRULE parse error');
       return res.status(400).json({ error: { message: "Invalid RRULE format" } });
     }
 
@@ -285,7 +286,7 @@ export const generateServices = async (req: Request & { user?: JwtPayload }, res
       }
     });
   } catch (err) {
-    console.error("Error generating services:", err);
+    logger.error({ err }, 'Error generating services:');
     res.status(500).json({ error: { message: "Could not generate services" } });
   }
 };

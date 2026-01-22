@@ -63,6 +63,7 @@ model Service {
 
   @@unique([serviceTypeId, serviceDate])
   @@index([serviceDate])
+  @@index([leaderId])
 }
 
 model WorshipSet {
@@ -77,6 +78,9 @@ model WorshipSet {
   suggestionSlots SuggestionSlot[]
   leaderUser      User?            @relation("WorshipSetLeader", fields: [leaderUserId], references: [id])
   service         Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([leaderUserId])
 }
 
 /// ///////////////////////////////////////////////////
@@ -143,6 +147,7 @@ model SetSong {
   userProgress       UserSetSongProgress[]
 
   @@unique([setId, position])
+  @@index([singerId])
 }
 
 /// Tracks whether a user has listened to a song for practice
@@ -191,6 +196,9 @@ model SuggestionSlot {
   suggestions    Suggestion[]
   assignedUser   User         @relation(fields: [assignedUserId], references: [id], onDelete: Cascade)
   worshipSet     WorshipSet   @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@index([setId])
+  @@index([assignedUserId])
 }
 
 model Suggestion {
@@ -203,6 +211,9 @@ model Suggestion {
   status             SuggestionStatus @default(pending)
   suggestionSlot     SuggestionSlot   @relation(fields: [slotId], references: [id], onDelete: Cascade)
   song               Song             @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@index([slotId])
+  @@index([songId])
 }
 
 /// ///////////////////////////////////////////////////
@@ -258,6 +269,9 @@ model Assignment {
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([setId, instrumentId, userId])
+  @@index([setId])
+  @@index([userId])
+  @@index([status])
 }
 
 /// ///////////////////////////////////////////////////

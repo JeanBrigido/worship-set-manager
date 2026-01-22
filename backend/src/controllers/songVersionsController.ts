@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import logger from "../utils/logger";
 import prisma from "../prisma";
 import { Role } from "@prisma/client";
 
@@ -19,7 +20,7 @@ export const listVersionsForSong = async (req: Request & { user?: JwtPayload }, 
     });
     res.json({ data: versions });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not list versions" } });
   }
 };
@@ -34,7 +35,7 @@ export const getVersion = async (req: Request & { user?: JwtPayload }, res: Resp
     if (!version) return res.status(404).json({ error: { message: "Song version not found" } });
     res.json({ data: version });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not fetch song version" } });
   }
 };
@@ -56,7 +57,7 @@ export const createVersion = async (req: Request & { user?: JwtPayload }, res: R
 
     res.status(201).json({ data: version });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not create version" } });
   }
 };
@@ -80,7 +81,7 @@ export const updateVersion = async (req: Request & { user?: JwtPayload }, res: R
 
     res.json({ data: updated });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not update version" } });
   }
 };
@@ -100,7 +101,7 @@ export const deleteVersion = async (req: Request & { user?: JwtPayload }, res: R
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'Operation failed');
     res.status(500).json({ error: { message: "Could not delete version" } });
   }
 };
