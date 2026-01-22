@@ -141,6 +141,22 @@ export function useDeleteSuggestion() {
   })
 }
 
+// Delete suggestion slot
+export function useDeleteSuggestionSlot() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (slotId: string) => {
+      const response = await apiClient.delete(`/suggestion-slots/${slotId}`)
+      if (response.error) throw new Error(response.error.message)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: suggestionSlotKeys.all })
+    },
+  })
+}
+
 // Get current user's suggestion assignments
 export function useMyAssignments() {
   return useQuery({

@@ -17,8 +17,10 @@ import { useToast } from '@/hooks/use-toast'
 import { SuggestedSongs } from '@/components/worship-set/suggested-songs'
 import { EditSetSongModal } from '@/components/worship-set/edit-set-song-modal'
 import { ExpandableSongRow } from '@/components/worship-set/expandable-song-row'
-import { useApproveSuggestion, useRejectSuggestion } from '@/hooks/use-suggestions'
-import { Calendar, Edit, Users, Music, Settings, ArrowLeft, Trash2, Plus, Search, Crown, ChevronUp, ChevronDown, Eye, Mic2, Music2, Headphones, Check } from 'lucide-react'
+import { useApproveSuggestion, useRejectSuggestion, useSuggestionSlotsByWorshipSet, useDeleteSuggestionSlot } from '@/hooks/use-suggestions'
+import { AssignSuggesterModal } from '@/components/worship-set/assign-suggester-modal'
+import { useUsers } from '@/hooks/useUsers'
+import { Calendar, Edit, Users, Music, Settings, ArrowLeft, Trash2, Plus, Search, Crown, ChevronUp, ChevronDown, Eye, Mic2, Music2, Headphones, Check, UserPlus, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { apiClient } from '@/lib/api-client'
 
@@ -122,9 +124,13 @@ export default function ServiceDetailPage() {
   const [removingSong, setRemovingSong] = useState(false)
   const [editingSong, setEditingSong] = useState<Service['worshipSet']['setSongs'][0] | null>(null)
   const [listenedSongIds, setListenedSongIds] = useState<Set<string>>(new Set())
+  const [showAssignSuggesterModal, setShowAssignSuggesterModal] = useState(false)
   const { toast } = useToast()
   const approveSuggestion = useApproveSuggestion()
   const rejectSuggestion = useRejectSuggestion()
+  const deleteSuggestionSlot = useDeleteSuggestionSlot()
+  const { data: suggestionSlots = [], refetch: refetchSlots } = useSuggestionSlotsByWorshipSet(service?.worshipSet?.id || '')
+  const { data: users = [] } = useUsers()
 
   // Check if current user is the worship set leader or admin
   const isAdmin = session?.user?.roles?.includes('admin')
@@ -507,6 +513,25 @@ export default function ServiceDetailPage() {
     })
   }
 
+  const handleDeleteSuggestionSlot = async (slotId: string, userName: string) => {
+    if (!confirm(`Remove ${userName} as a song suggester?`)) {
+      return
+    }
+    try {
+      await deleteSuggestionSlot.mutateAsync(slotId)
+      toast({
+        title: 'Success',
+        description: 'Song suggester removed',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to remove suggester',
+        variant: 'destructive',
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -812,6 +837,84 @@ export default function ServiceDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Song Suggesters */}
+      {service.worshipSet && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Song Suggesters
+              </CardTitle>
+              {canManageWorshipSet && (
+                <Button size="sm" onClick={() => setShowAssignSuggesterModal(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add Suggester
+                </Button>
+              )}
+            </div>
+            <CardDescription>
+              Team members assigned to suggest songs for this service
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {suggestionSlots.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {suggestionSlots.map((slot) => (
+                  <div key={slot.id} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{slot.assignedUser?.name || 'Unassigned'}</span>
+                      <Badge variant={
+                        slot.status === 'submitted' ? 'default' :
+                        slot.status === 'missed' ? 'destructive' : 'secondary'
+                      } className="text-xs">
+                        {slot.status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground mb-2">
+                      {slot.assignedUser?.email}
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-2">
+                      {slot.minSongs}-{slot.maxSongs} songs • Due: {new Date(slot.dueAt).toLocaleDateString()}
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-3">
+                      {slot.suggestions?.length || 0} suggestion(s) submitted
+                    </div>
+                    {canManageWorshipSet && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteSuggestionSlot(slot.id, slot.assignedUser?.name || 'Unassigned')}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No song suggesters assigned</p>
+                {canManageWorshipSet ? (
+                  <>
+                    <p className="text-sm">Add team members to suggest songs for this service</p>
+                    <Button className="mt-4" variant="outline" onClick={() => setShowAssignSuggesterModal(true)}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Add Suggester
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm">Song suggesters will appear here once assigned</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Suggested Songs */}
       {service.worshipSet && (
         <SuggestedSongs
@@ -1026,6 +1129,24 @@ export default function ServiceDetailPage() {
           })
         }}
       />
+
+      {/* Assign Suggester Modal */}
+      {service.worshipSet && (
+        <AssignSuggesterModal
+          isOpen={showAssignSuggesterModal}
+          onClose={() => {
+            setShowAssignSuggesterModal(false)
+            refetchSlots()
+          }}
+          worshipSetId={service.worshipSet.id}
+          users={users.map(u => ({
+            id: u.id,
+            name: u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.email,
+            email: u.email,
+            roles: u.roles,
+          }))}
+        />
+      )}
     </div>
   )
 }
