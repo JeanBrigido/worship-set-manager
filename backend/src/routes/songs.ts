@@ -14,11 +14,11 @@ const router = Router();
  * Base path: /songs
  */
 
-// List all songs (cache for 5 minutes)
-router.get("/", authMiddleware, shortCache, songsController.listSongs);
+// List all songs (no cache - songs change frequently)
+router.get("/", authMiddleware, noCache, songsController.listSongs);
 
-// Get one song (cache for 5 minutes)
-router.get("/:id", authMiddleware, validateUuid('id'), shortCache, songsController.getSong);
+// Get one song (no cache - songs change frequently)
+router.get("/:id", authMiddleware, validateUuid('id'), noCache, songsController.getSong);
 
 // Any role: create new song
 router.post(

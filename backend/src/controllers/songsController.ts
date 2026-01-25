@@ -39,17 +39,17 @@ export const listSongs = async (req: Request & { user?: JwtPayload }, res: Respo
     const allowedSortFields = ["title", "artist", "familiarityScore", "createdAt", "updatedAt"];
     const orderByField = allowedSortFields.includes(sortBy) ? sortBy : "title";
 
-    // Get total count for pagination
-    const total = await prisma.song.count({ where });
-
-    // Get paginated results
-    const songs = await prisma.song.findMany({
-      where,
-      orderBy: { [orderByField]: sortOrder },
-      include: { versions: true },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    // Use $transaction to ensure consistent reads across PgBouncer connections
+    const [total, songs] = await prisma.$transaction([
+      prisma.song.count({ where }),
+      prisma.song.findMany({
+        where,
+        orderBy: { [orderByField]: sortOrder },
+        include: { versions: true },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
 
     res.json({
       data: songs,

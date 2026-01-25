@@ -153,6 +153,10 @@ export default function SongsPage() {
       return
     }
 
+    // Optimistic update: remove song from UI immediately
+    const previousSongs = songs
+    setSongs(prev => prev.filter(song => song.id !== id))
+
     try {
       const { data, error } = await apiClient.delete(`/songs/${id}`)
 
@@ -164,8 +168,11 @@ export default function SongsPage() {
         title: 'Success',
         description: 'Song deleted successfully',
       })
+      // Refetch to sync with server (but UI already updated)
       fetchSongs()
     } catch (error) {
+      // Revert optimistic update on error
+      setSongs(previousSongs)
       console.error('Error deleting song:', error)
       toast({
         title: 'Error',
