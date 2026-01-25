@@ -14,13 +14,16 @@ out/
 # Environment variables - NEVER commit these!
 .env
 .env.local
+.env.development
 .env.development.local
 .env.test
 .env.test.local
 .env.production
 .env.production.local
+backend/.env.production
 *.env
 !.env.example
+!.env.development.example
 
 # Secrets and credentials
 secrets/

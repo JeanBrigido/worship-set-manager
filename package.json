@@ -20,7 +20,10 @@
     "lint": "npm run lint --workspaces",
     "lint:fix": "npm run lint:fix --workspaces",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "env:dev": "./scripts/switch-env.sh dev",
+    "env:prod": "./scripts/switch-env.sh prod",
+    "env:status": "./scripts/switch-env.sh status"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

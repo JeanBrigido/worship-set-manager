@@ -120,3 +120,66 @@ This is an npm workspaces monorepo with two packages:
 
 ### API Response Format
 Backend returns `{ data: T }` for success, `{ error: { message, code?, details? } }` for errors.
+
+## Environments & Deployment
+
+### Production
+- **Domain**: https://sab-worship.com
+- **Frontend**: Vercel
+- **Backend**: Railway (https://sab-music.up.railway.app)
+- **Database**: Supabase (`alnclerrwasslbefywjx`)
+- **Branch**: `main`
+
+### Development
+- **Frontend**: localhost:3000
+- **Backend**: localhost:3001
+- **Database**: Supabase (`uoftbqnlfvhyfzwcrkfc`)
+- **Branch**: `develop`
+
+### Environment Switching
+
+```bash
+# Switch to DEVELOPMENT (develop branch + dev database)
+npm run env:dev
+
+# Switch to PRODUCTION (main branch + prod database) - requires confirmation
+npm run env:prod
+
+# Check current environment status
+npm run env:status
+```
+
+### Git Branching Strategy
+
+```
+main (production) ◄─────── Only merge when ready to deploy to sab-worship.com
+    │
+    └── develop (integration) ◄─── Feature branches merge here first
+            │
+            ├── feature/new-feature
+            └── fix/bug-fix
+```
+
+**Workflow:**
+1. `npm run env:dev` - Switch to development environment
+2. `git checkout -b feature/my-feature` - Create feature branch from develop
+3. Make changes, test locally with dev database
+4. `git push origin feature/my-feature` - Push and create PR to `develop`
+5. After testing on develop, create PR from `develop` → `main` to deploy
+
+### Environment Files
+
+| File | Purpose | Git |
+|------|---------|-----|
+| `backend/.env` | Active backend config | Ignored |
+| `backend/.env.development` | Dev database config | Ignored |
+| `backend/.env.production` | Prod database backup | Ignored |
+| `frontend/.env.local` | Active frontend config | Ignored |
+| `frontend/.env.development.local` | Dev frontend config | Ignored |
+| `frontend/.env.production.local` | Prod frontend backup | Ignored |
+
+### Important Files
+
+- `DEPLOYMENT_SECRETS.md` - All credentials and connection strings (gitignored)
+- `DEVELOPMENT_WORKFLOW.md` - Detailed development workflow guide
+- `scripts/switch-env.sh` - Environment switching script
