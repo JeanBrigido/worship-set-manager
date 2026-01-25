@@ -28,6 +28,7 @@ export async function PUT(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        cache: 'no-store',
       }
     );
 

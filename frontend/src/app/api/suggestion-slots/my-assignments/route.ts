@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     });
 
     if (!response.ok) {

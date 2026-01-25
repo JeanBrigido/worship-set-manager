@@ -23,6 +23,7 @@ export async function GET(
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     })
 
     if (!response.ok) {
@@ -66,6 +67,7 @@ export async function PUT(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      cache: 'no-store',
     })
 
     if (!response.ok) {
@@ -107,6 +109,7 @@ export async function DELETE(
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     })
 
     if (!response.ok) {

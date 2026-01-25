@@ -25,6 +25,7 @@ export async function POST(
         'Authorization': `Bearer ${token}`,
       },
       body: formData,
+      cache: 'no-store',
     })
 
     if (!response.ok) {
